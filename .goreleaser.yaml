@@ -1,0 +1,39 @@
+version: 2
+
+project_name: cogni
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: cogni
+    main: ./cmd/cogni
+    binary: cogni
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w -X main.version={{.Version}}
+
+archives:
+  - id: cogni
+    name_template: "cogni_{{ .Os }}_{{ .Arch }}"
+    formats: [tar.gz]
+    files:
+      - LICENSE
+      - README.md
+
+checksum:
+  name_template: checksums.txt
+
+release:
+  github:
+    owner: islamborghini
+    name: cogni
+  draft: true
