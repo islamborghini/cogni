@@ -10,8 +10,11 @@ builds:
   - id: cogni
     main: ./cmd/cogni
     binary: cogni
+    # tree-sitter requires CGO. Cross-compiling CGO across the four targets
+    # below needs a cross C toolchain in CI (zig cc or per-arch images);
+    # wire that up before the v0.1 release tag.
     env:
-      - CGO_ENABLED=0
+      - CGO_ENABLED=1
     goos:
       - darwin
       - linux
