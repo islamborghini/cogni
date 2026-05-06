@@ -152,6 +152,67 @@ func scanSymbols(rows *sql.Rows) ([]SymbolRow, error) {
 	return out, rows.Err()
 }
 
+// SymbolsByFile returns all symbols for the given repo-relative file path,
+// ordered by start_line. Used by file_outline.
+func (s *Store) SymbolsByFile(path string) ([]SymbolRow, error) {
+	rows, err := s.db.Query(
+		`SELECT s.id, s.file_id, f.path, s.name, s.qualified, s.kind,
+		        s.start_line, s.end_line,
+		        IFNULL(s.signature, ''), IFNULL(s.docstring, '')
+		   FROM symbols s
+		   JOIN files f ON f.id = s.file_id
+		  WHERE f.path = ?
+		  ORDER BY s.start_line`,
+		path,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return scanSymbols(rows)
+}
+
+// AllFilePaths returns every indexed file's repo-relative path. Used by
+// repo_overview to build the package tree in Go.
+func (s *Store) AllFilePaths() ([]string, error) {
+	rows, err := s.db.Query(`SELECT path FROM files ORDER BY path`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []string
+	for rows.Next() {
+		var p string
+		if err := rows.Scan(&p); err != nil {
+			return nil, err
+		}
+		out = append(out, p)
+	}
+	return out, rows.Err()
+}
+
+// TopExportedSymbolsByPrefix returns up to limit non-underscore symbols whose
+// file path begins with prefix. Used by repo_overview to surface the most
+// visible names per package.
+func (s *Store) TopExportedSymbolsByPrefix(prefix string, limit int) ([]SymbolRow, error) {
+	rows, err := s.db.Query(
+		`SELECT s.id, s.file_id, f.path, s.name, s.qualified, s.kind,
+		        s.start_line, s.end_line,
+		        IFNULL(s.signature, ''), IFNULL(s.docstring, '')
+		   FROM symbols s
+		   JOIN files f ON f.id = s.file_id
+		  WHERE (f.path = ? OR f.path LIKE ?)
+		    AND s.name NOT LIKE '\_%' ESCAPE '\'
+		    AND s.kind IN ('function','class')
+		  ORDER BY CASE s.kind WHEN 'class' THEN 0 ELSE 1 END, s.name
+		  LIMIT ?`,
+		prefix, prefix+"/%", limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return scanSymbols(rows)
+}
+
 // FileSHA returns the sha256 stored for path, or sql.ErrNoRows if absent.
 func (s *Store) FileSHA(path string) (string, error) {
 	var sha string
