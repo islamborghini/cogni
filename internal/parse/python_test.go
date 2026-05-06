@@ -1,38 +1,25 @@
 package parse
 
 import (
+	"embed"
 	"reflect"
 	"testing"
 )
 
-const pythonSample = `"""Module docstring."""
-import os
+//go:embed testdata/*.py
+var fixtures embed.FS
 
-CONSTANT = 42
-
-def hello(name):
-    """Greet."""
-    return f"hi {name}"
-
-async def fetch(url):
-    return url
-
-@staticmethod
-def utility():
-    return 1
-
-class Greeter:
-    def greet(self, name):
-        return name
-
-@dataclass
-class Point:
-    x: int
-    y: int
-`
+func loadFixture(t *testing.T, name string) []byte {
+	t.Helper()
+	data, err := fixtures.ReadFile("testdata/" + name)
+	if err != nil {
+		t.Fatalf("load fixture %s: %v", name, err)
+	}
+	return data
+}
 
 func TestParsePythonTopLevel(t *testing.T) {
-	got, err := ParsePythonTopLevel([]byte(pythonSample))
+	got, err := ParsePythonTopLevel(loadFixture(t, "simple.py"))
 	if err != nil {
 		t.Fatalf("ParsePythonTopLevel: %v", err)
 	}
@@ -48,8 +35,8 @@ func TestParsePythonTopLevel(t *testing.T) {
 	}
 }
 
-func TestParsePython_Methods(t *testing.T) {
-	got, err := ParsePython([]byte(pythonSample))
+func TestParsePython_Simple(t *testing.T) {
+	got, err := ParsePython(loadFixture(t, "simple.py"))
 	if err != nil {
 		t.Fatalf("ParsePython: %v", err)
 	}
