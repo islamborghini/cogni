@@ -48,6 +48,24 @@ func TestParsePythonTopLevel(t *testing.T) {
 	}
 }
 
+func TestParsePython_Methods(t *testing.T) {
+	got, err := ParsePython([]byte(pythonSample))
+	if err != nil {
+		t.Fatalf("ParsePython: %v", err)
+	}
+	want := []Symbol{
+		{Name: "hello", Qualified: "hello", Kind: KindFunction, StartLine: 6, EndLine: 8},
+		{Name: "fetch", Qualified: "fetch", Kind: KindFunction, StartLine: 10, EndLine: 11},
+		{Name: "utility", Qualified: "utility", Kind: KindFunction, StartLine: 13, EndLine: 15},
+		{Name: "Greeter", Qualified: "Greeter", Kind: KindClass, StartLine: 17, EndLine: 19},
+		{Name: "greet", Qualified: "Greeter.greet", Kind: KindMethod, StartLine: 18, EndLine: 19},
+		{Name: "Point", Qualified: "Point", Kind: KindClass, StartLine: 21, EndLine: 24},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("symbol mismatch\n got:  %+v\n want: %+v", got, want)
+	}
+}
+
 func TestParsePythonTopLevel_Empty(t *testing.T) {
 	got, err := ParsePythonTopLevel([]byte("# just a comment\n"))
 	if err != nil {
