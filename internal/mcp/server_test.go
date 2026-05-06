@@ -86,8 +86,6 @@ func TestStubHandlersReturnJSON(t *testing.T) {
 		name string
 		args map[string]any
 	}{
-		{"repo_overview", map[string]any{}},
-		{"file_outline", map[string]any{"path": "a.py"}},
 		{"symbol_search", map[string]any{"query": "hello"}},
 		{"symbol_source", map[string]any{"name": "hello"}},
 		{"find_references", map[string]any{"name": "hello"}},

@@ -149,18 +149,41 @@ func findReferencesTool() mcp.Tool {
 // agent tool-selection behavior before implementing the queries.
 
 func (s *Server) handleRepoOverview(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	return jsonResult(map[string]any{
-		"stub":     true,
-		"packages": []map[string]any{{"path": ".", "name": "root", "file_count": 0, "summary": "stub"}},
-	})
+	maxDepth := int(req.GetFloat("max_depth", 3))
+	pkgs, err := BuildOverview(s.store, maxDepth, 5)
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+	return jsonResult(map[string]any{"packages": pkgs})
 }
 
 func (s *Server) handleFileOutline(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	return jsonResult(map[string]any{
-		"stub":    true,
-		"path":    req.GetString("path", ""),
-		"symbols": []any{},
-	})
+	path := req.GetString("path", "")
+	if path == "" {
+		return mcp.NewToolResultError("path is required"), nil
+	}
+	rows, err := s.store.SymbolsByFile(path)
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+	type outlineSym struct {
+		Name      string `json:"name"`
+		Qualified string `json:"qualified"`
+		Kind      string `json:"kind"`
+		StartLine int    `json:"start_line"`
+		EndLine   int    `json:"end_line"`
+		Signature string `json:"signature,omitempty"`
+		Docstring string `json:"docstring,omitempty"`
+	}
+	out := make([]outlineSym, 0, len(rows))
+	for _, r := range rows {
+		out = append(out, outlineSym{
+			Name: r.Name, Qualified: r.Qualified, Kind: r.Kind,
+			StartLine: r.StartLine, EndLine: r.EndLine,
+			Signature: r.Signature, Docstring: r.Docstring,
+		})
+	}
+	return jsonResult(map[string]any{"path": path, "symbols": out})
 }
 
 func (s *Server) handleSymbolSearch(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
