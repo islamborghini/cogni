@@ -72,8 +72,10 @@ func topLevelSymbol(n *ts.Node, src []byte) (Symbol, bool) {
 	if nameNode == nil {
 		return Symbol{}, false
 	}
+	name := nameNode.Utf8Text(src)
 	return Symbol{
-		Name:      nameNode.Utf8Text(src),
+		Name:      name,
+		Qualified: name,
 		Kind:      kind,
 		StartLine: startLine,
 		EndLine:   endLine,

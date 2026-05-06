@@ -37,11 +37,11 @@ func TestParsePythonTopLevel(t *testing.T) {
 		t.Fatalf("ParsePythonTopLevel: %v", err)
 	}
 	want := []Symbol{
-		{Name: "hello", Kind: KindFunction, StartLine: 6, EndLine: 8},
-		{Name: "fetch", Kind: KindFunction, StartLine: 10, EndLine: 11},
-		{Name: "utility", Kind: KindFunction, StartLine: 13, EndLine: 15},
-		{Name: "Greeter", Kind: KindClass, StartLine: 17, EndLine: 19},
-		{Name: "Point", Kind: KindClass, StartLine: 21, EndLine: 24},
+		{Name: "hello", Qualified: "hello", Kind: KindFunction, StartLine: 6, EndLine: 8},
+		{Name: "fetch", Qualified: "fetch", Kind: KindFunction, StartLine: 10, EndLine: 11},
+		{Name: "utility", Qualified: "utility", Kind: KindFunction, StartLine: 13, EndLine: 15},
+		{Name: "Greeter", Qualified: "Greeter", Kind: KindClass, StartLine: 17, EndLine: 19},
+		{Name: "Point", Qualified: "Point", Kind: KindClass, StartLine: 21, EndLine: 24},
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("symbol mismatch\n got:  %+v\n want: %+v", got, want)
