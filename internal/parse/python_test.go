@@ -54,11 +54,11 @@ func TestParsePython_Methods(t *testing.T) {
 		t.Fatalf("ParsePython: %v", err)
 	}
 	want := []Symbol{
-		{Name: "hello", Qualified: "hello", Kind: KindFunction, StartLine: 6, EndLine: 8},
-		{Name: "fetch", Qualified: "fetch", Kind: KindFunction, StartLine: 10, EndLine: 11},
-		{Name: "utility", Qualified: "utility", Kind: KindFunction, StartLine: 13, EndLine: 15},
+		{Name: "hello", Qualified: "hello", Kind: KindFunction, StartLine: 6, EndLine: 8, Signature: "def hello(name)"},
+		{Name: "fetch", Qualified: "fetch", Kind: KindFunction, StartLine: 10, EndLine: 11, Signature: "async def fetch(url)"},
+		{Name: "utility", Qualified: "utility", Kind: KindFunction, StartLine: 13, EndLine: 15, Signature: "def utility()"},
 		{Name: "Greeter", Qualified: "Greeter", Kind: KindClass, StartLine: 17, EndLine: 19},
-		{Name: "greet", Qualified: "Greeter.greet", Kind: KindMethod, StartLine: 18, EndLine: 19},
+		{Name: "greet", Qualified: "Greeter.greet", Kind: KindMethod, StartLine: 18, EndLine: 19, Signature: "def greet(self, name)"},
 		{Name: "Point", Qualified: "Point", Kind: KindClass, StartLine: 21, EndLine: 24},
 	}
 	if !reflect.DeepEqual(got, want) {

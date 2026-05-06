@@ -2,6 +2,7 @@ package parse
 
 import (
 	"errors"
+	"strings"
 
 	ts "github.com/tree-sitter/go-tree-sitter"
 	tspython "github.com/tree-sitter/tree-sitter-python/bindings/go"
@@ -120,8 +121,28 @@ func extractDef(n *ts.Node, src []byte, parent string) (Symbol, *ts.Node, bool) 
 	}
 
 	body := def.ChildByFieldName("body")
+	if kind == KindFunction {
+		sym.Signature = extractSignature(def, body, src)
+	}
 	if kind == KindClass {
 		return sym, body, true
 	}
 	return sym, nil, true
+}
+
+// extractSignature returns the def line up to (but excluding) the body, with
+// trailing whitespace and the colon trimmed. Returns "def hello(name)" for
+// `def hello(name):\n    ...` and "async def fetch(url) -> str" for the typed
+// async form. Returns empty string if the body offset can't be determined.
+func extractSignature(def, body *ts.Node, src []byte) string {
+	if body == nil {
+		return ""
+	}
+	start := def.StartByte()
+	end := body.StartByte()
+	if end <= start || end > uint(len(src)) {
+		return ""
+	}
+	sig := strings.TrimRight(string(src[start:end]), " \t\n:")
+	return sig
 }
