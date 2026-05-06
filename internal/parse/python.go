@@ -3,10 +3,15 @@ package parse
 import (
 	"errors"
 	"strings"
+	"unicode/utf8"
 
 	ts "github.com/tree-sitter/go-tree-sitter"
 	tspython "github.com/tree-sitter/tree-sitter-python/bindings/go"
 )
+
+// docstringMaxLen caps the stored docstring length. Matches the SQLite schema
+// reasoning in the v0.1 plan: docstrings are summary-grade, not full text.
+const docstringMaxLen = 500
 
 // pythonLang is loaded once. tree-sitter Languages are immutable and safe for
 // concurrent reuse, unlike Parser instances.
@@ -124,10 +129,46 @@ func extractDef(n *ts.Node, src []byte, parent string) (Symbol, *ts.Node, bool) 
 	if kind == KindFunction {
 		sym.Signature = extractSignature(def, body, src)
 	}
+	sym.Docstring = extractDocstring(body, src)
 	if kind == KindClass {
 		return sym, body, true
 	}
 	return sym, nil, true
+}
+
+// extractDocstring returns the first-paragraph docstring for the given body
+// block, or "" if the first statement is not a bare string. The result is
+// trimmed, cut at the first blank line, and capped at docstringMaxLen runes.
+func extractDocstring(body *ts.Node, src []byte) string {
+	if body == nil || body.NamedChildCount() == 0 {
+		return ""
+	}
+	first := body.NamedChild(0)
+	if first.Kind() != "expression_statement" || first.NamedChildCount() == 0 {
+		return ""
+	}
+	str := first.NamedChild(0)
+	if str.Kind() != "string" {
+		return ""
+	}
+
+	var b strings.Builder
+	for i := uint(0); i < str.NamedChildCount(); i++ {
+		c := str.NamedChild(i)
+		if c.Kind() == "string_content" {
+			b.WriteString(c.Utf8Text(src))
+		}
+	}
+	raw := b.String()
+	if idx := strings.Index(raw, "\n\n"); idx >= 0 {
+		raw = raw[:idx]
+	}
+	raw = strings.TrimSpace(raw)
+	if utf8.RuneCountInString(raw) > docstringMaxLen {
+		runes := []rune(raw)
+		raw = string(runes[:docstringMaxLen])
+	}
+	return raw
 }
 
 // extractSignature returns the def line up to (but excluding) the body, with
