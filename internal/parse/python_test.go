@@ -54,6 +54,7 @@ func TestParsePython_Methods(t *testing.T) {
 		t.Fatalf("ParsePython: %v", err)
 	}
 	want := []Symbol{
+		{Name: "CONSTANT", Qualified: "CONSTANT", Kind: KindConstant, StartLine: 4, EndLine: 4},
 		{Name: "hello", Qualified: "hello", Kind: KindFunction, StartLine: 6, EndLine: 8, Signature: "def hello(name)", Docstring: "Greet."},
 		{Name: "fetch", Qualified: "fetch", Kind: KindFunction, StartLine: 10, EndLine: 11, Signature: "async def fetch(url)"},
 		{Name: "utility", Qualified: "utility", Kind: KindFunction, StartLine: 13, EndLine: 15, Signature: "def utility()"},

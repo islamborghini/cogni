@@ -77,8 +77,61 @@ func walkScope(scope *ts.Node, src []byte, parent string, inClass bool, out *[]S
 			if sym.Kind == KindClass && body != nil {
 				walkScope(body, src, sym.Qualified, true, out)
 			}
+		case "expression_statement":
+			if inClass || c.NamedChildCount() == 0 {
+				continue
+			}
+			inner := c.NamedChild(0)
+			if inner.Kind() != "assignment" {
+				continue
+			}
+			if sym, ok := extractAssign(inner, src, parent); ok {
+				*out = append(*out, sym)
+			}
 		}
 	}
+}
+
+// extractAssign turns a simple `name = value` or `NAME: T = value` assignment
+// into a Symbol. Tuple unpacking, attribute targets (`obj.x = ...`), and
+// subscript targets are skipped at this layer.
+func extractAssign(n *ts.Node, src []byte, parent string) (Symbol, bool) {
+	left := n.ChildByFieldName("left")
+	if left == nil || left.Kind() != "identifier" {
+		return Symbol{}, false
+	}
+	name := left.Utf8Text(src)
+	kind := KindVariable
+	if isAllCaps(name) {
+		kind = KindConstant
+	}
+	qualified := name
+	if parent != "" {
+		qualified = parent + "." + name
+	}
+	return Symbol{
+		Name:      name,
+		Qualified: qualified,
+		Kind:      kind,
+		StartLine: int(n.StartPosition().Row) + 1,
+		EndLine:   int(n.EndPosition().Row) + 1,
+	}, true
+}
+
+// isAllCaps reports whether s contains at least one ASCII letter and no
+// lowercase letters — the conventional Python marker for a module-level
+// constant. Underscores and digits are neutral.
+func isAllCaps(s string) bool {
+	hasLetter := false
+	for _, r := range s {
+		switch {
+		case r >= 'a' && r <= 'z':
+			return false
+		case r >= 'A' && r <= 'Z':
+			hasLetter = true
+		}
+	}
+	return hasLetter
 }
 
 // extractDef pulls a Symbol out of a function_definition, class_definition, or
