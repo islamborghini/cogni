@@ -54,6 +54,23 @@ func TestParsePython_Simple(t *testing.T) {
 	}
 }
 
+func TestParsePython_Nested(t *testing.T) {
+	got, err := ParsePython(loadFixture(t, "nested.py"))
+	if err != nil {
+		t.Fatalf("ParsePython: %v", err)
+	}
+	want := []Symbol{
+		{Name: "Outer", Qualified: "Outer", Kind: KindClass, StartLine: 3, EndLine: 16, Docstring: "Outer class."},
+		{Name: "Inner", Qualified: "Outer.Inner", Kind: KindClass, StartLine: 6, EndLine: 10, Docstring: "Inner class."},
+		{Name: "ping", Qualified: "Outer.Inner.ping", Kind: KindMethod, StartLine: 9, EndLine: 10, Signature: "def ping(self)"},
+		{Name: "outer_method", Qualified: "Outer.outer_method", Kind: KindMethod, StartLine: 12, EndLine: 16, Signature: "def outer_method(self, x)", Docstring: "Outer method."},
+		{Name: "StandAlone", Qualified: "StandAlone", Kind: KindClass, StartLine: 18, EndLine: 19},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("symbol mismatch\n got:  %+v\n want: %+v", got, want)
+	}
+}
+
 func TestParsePythonTopLevel_Empty(t *testing.T) {
 	got, err := ParsePythonTopLevel([]byte("# just a comment\n"))
 	if err != nil {
