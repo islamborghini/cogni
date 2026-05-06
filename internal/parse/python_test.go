@@ -37,9 +37,9 @@ func TestParsePythonTopLevel(t *testing.T) {
 		t.Fatalf("ParsePythonTopLevel: %v", err)
 	}
 	want := []Symbol{
-		{Name: "hello", Qualified: "hello", Kind: KindFunction, StartLine: 6, EndLine: 8},
-		{Name: "fetch", Qualified: "fetch", Kind: KindFunction, StartLine: 10, EndLine: 11},
-		{Name: "utility", Qualified: "utility", Kind: KindFunction, StartLine: 13, EndLine: 15},
+		{Name: "hello", Qualified: "hello", Kind: KindFunction, StartLine: 6, EndLine: 8, Signature: "def hello(name)"},
+		{Name: "fetch", Qualified: "fetch", Kind: KindFunction, StartLine: 10, EndLine: 11, Signature: "async def fetch(url)"},
+		{Name: "utility", Qualified: "utility", Kind: KindFunction, StartLine: 13, EndLine: 15, Signature: "def utility()"},
 		{Name: "Greeter", Qualified: "Greeter", Kind: KindClass, StartLine: 17, EndLine: 19},
 		{Name: "Point", Qualified: "Point", Kind: KindClass, StartLine: 21, EndLine: 24},
 	}
