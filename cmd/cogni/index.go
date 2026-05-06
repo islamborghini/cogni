@@ -39,7 +39,7 @@ func runIndex(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	dbPath, err := resolveDBPath(indexFlags.db)
+	dbPath, err := resolveDBPath(indexFlags.db, abs)
 	if err != nil {
 		return err
 	}
@@ -64,15 +64,11 @@ func runIndex(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func resolveDBPath(override string) (string, error) {
+func resolveDBPath(override, root string) (string, error) {
 	if override != "" {
 		return override, nil
 	}
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(home, ".cogni", "index.db"), nil
+	return index.DBPathFor(root)
 }
 
 func printStats(cmd *cobra.Command, root, dbPath string, st index.Stats) {

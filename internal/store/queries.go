@@ -152,6 +152,19 @@ func scanSymbols(rows *sql.Rows) ([]SymbolRow, error) {
 	return out, rows.Err()
 }
 
+// FileSHA returns the sha256 stored for path, or sql.ErrNoRows if absent.
+func (s *Store) FileSHA(path string) (string, error) {
+	var sha string
+	err := s.db.QueryRow(`SELECT sha256 FROM files WHERE path=?`, path).Scan(&sha)
+	return sha, err
+}
+
+// DeleteFile removes the row for path; symbols cascade.
+func (s *Store) DeleteFile(path string) error {
+	_, err := s.db.Exec(`DELETE FROM files WHERE path=?`, path)
+	return err
+}
+
 func nullableString(s string) any {
 	if s == "" {
 		return nil
