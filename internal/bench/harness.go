@@ -4,7 +4,12 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
+	"path/filepath"
 	"time"
+
+	"github.com/islamborghini/cogni/internal/index"
+	"github.com/islamborghini/cogni/internal/store"
 )
 
 // HarnessOptions configures a benchmark run.
@@ -76,9 +81,43 @@ func realRunOne(ctx context.Context, set *TaskSet, task Task, cond Condition, ru
 	}
 	defer func() { _ = ws.Cleanup() }()
 
+	if cond == ConditionCogni {
+		if err := indexWorkspace(ws.Path); err != nil {
+			return Score{
+				Run: RunResult{
+					TaskID:     task.ID,
+					Condition:  cond,
+					RunIndex:   runIndex,
+					Err:        fmt.Errorf("index workspace: %w", err),
+					DurationMS: time.Since(start).Milliseconds(),
+				},
+			}
+		}
+	}
+
 	runner := &ClaudeRunner{Cfg: opts.RunnerCfg, Workspace: ws}
 	res := runner.Run(ctx, task, cond, runIndex)
 	return ScoreRun(task, res)
+}
+
+// indexWorkspace builds the cogni index for a freshly-prepared workspace so
+// that the MCP server (spawned by claude via --mcp-config) sees a populated
+// DB instead of returning empty results to every tool call.
+func indexWorkspace(root string) error {
+	dbPath, err := index.DBPathFor(root)
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(dbPath), 0o755); err != nil {
+		return err
+	}
+	s, err := store.Open(dbPath)
+	if err != nil {
+		return err
+	}
+	defer s.Close()
+	_, err = index.Build(root, s)
+	return err
 }
 
 func logProgress(w io.Writer, s Score) {
