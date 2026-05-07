@@ -9,7 +9,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"time"
 )
 
@@ -22,6 +24,9 @@ type ClaudeRunnerConfig struct {
 	MCPConfigPath string
 	// Model overrides the model selection. Empty means SDK default.
 	Model string
+	// RunsDir, if non-empty, receives a per-run JSONL transcript named
+	// "<task>-<condition>-<run>.jsonl" — the raw stream-json output.
+	RunsDir string
 }
 
 // ClaudeRunner is a Runner that drives the Claude Code SDK in headless mode
@@ -64,13 +69,29 @@ func (r *ClaudeRunner) Run(ctx context.Context, task Task, cond Condition, runIn
 	}
 	cmd.Stderr = io.Discard
 
+	var streamReader io.Reader = stdout
+	if r.Cfg.RunsDir != "" {
+		if err := os.MkdirAll(r.Cfg.RunsDir, 0o755); err != nil {
+			res.Err = fmt.Errorf("create runs dir: %w", err)
+			return res
+		}
+		fname := fmt.Sprintf("%s-%s-%d.jsonl", task.ID, cond, runIndex)
+		f, err := os.Create(filepath.Join(r.Cfg.RunsDir, fname))
+		if err != nil {
+			res.Err = fmt.Errorf("create transcript: %w", err)
+			return res
+		}
+		defer f.Close()
+		streamReader = io.TeeReader(stdout, f)
+	}
+
 	start := time.Now()
 	if err := cmd.Start(); err != nil {
 		res.Err = fmt.Errorf("start claude: %w", err)
 		return res
 	}
 
-	parsed, parseErr := parseStreamJSON(stdout)
+	parsed, parseErr := parseStreamJSON(streamReader)
 	waitErr := cmd.Wait()
 	res.DurationMS = time.Since(start).Milliseconds()
 
