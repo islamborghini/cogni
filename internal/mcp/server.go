@@ -344,10 +344,36 @@ func readLineRange(root, relPath string, start, end, context int) (string, int, 
 }
 
 func (s *Server) handleFindReferences(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	name := strings.TrimSpace(req.GetString("name", ""))
+	if name == "" {
+		return mcp.NewToolResultError("name is required"), nil
+	}
+	limit := int(req.GetFloat("limit", 50))
+	if limit <= 0 {
+		limit = 50
+	}
+	if limit > 200 {
+		limit = 200
+	}
+	kinds := req.GetStringSlice("kinds", nil)
+
+	rows, err := s.store.RefsByName(name, kinds, limit)
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+	type refOut struct {
+		Path        string `json:"path"`
+		Line        int    `json:"line"`
+		Col         int    `json:"col"`
+		ContextKind string `json:"context_kind"`
+	}
+	out := make([]refOut, 0, len(rows))
+	for _, r := range rows {
+		out = append(out, refOut{r.FilePath, r.Line, r.Col, r.ContextKind})
+	}
 	return jsonResult(map[string]any{
-		"stub":       true,
-		"name":       req.GetString("name", ""),
-		"references": []any{},
+		"name":       name,
+		"references": out,
 	})
 }
 

@@ -3,6 +3,7 @@ package store
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/islamborghini/cogni/internal/parse"
@@ -114,6 +115,80 @@ func (s *Store) SymbolsByQualified(q string, limit int) ([]SymbolRow, error) {
 		return nil, err
 	}
 	return scanSymbols(rows)
+}
+
+// RefRow is a persisted reference joined with its file path.
+type RefRow struct {
+	ID          int64
+	FileID      int64
+	FilePath    string
+	SymbolName  string
+	Line        int
+	Col         int
+	ContextKind string
+}
+
+// ReplaceRefs deletes all refs for fileID and inserts the given references in
+// a single transaction. Use from the indexer after each (re)parse.
+func (s *Store) ReplaceRefs(fileID int64, refs []parse.Reference) error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	if _, err := tx.Exec(`DELETE FROM refs WHERE file_id=?`, fileID); err != nil {
+		return fmt.Errorf("clear refs: %w", err)
+	}
+	stmt, err := tx.Prepare(
+		`INSERT INTO refs(file_id, symbol_name, line, col, context_kind)
+		 VALUES(?, ?, ?, ?, ?)`,
+	)
+	if err != nil {
+		return fmt.Errorf("prepare insert refs: %w", err)
+	}
+	defer stmt.Close()
+	for _, r := range refs {
+		if _, err := stmt.Exec(fileID, r.Name, r.Line, r.Col, string(r.Kind)); err != nil {
+			return fmt.Errorf("insert ref %s: %w", r.Name, err)
+		}
+	}
+	return tx.Commit()
+}
+
+// RefsByName returns reference sites for the bare symbol name. When kinds is
+// non-empty, results are restricted to those context kinds.
+func (s *Store) RefsByName(name string, kinds []string, limit int) ([]RefRow, error) {
+	sqlText := `SELECT r.id, r.file_id, f.path, r.symbol_name, r.line, r.col, r.context_kind
+	              FROM refs r
+	              JOIN files f ON f.id = r.file_id
+	             WHERE r.symbol_name = ?`
+	args := []any{name}
+	if len(kinds) > 0 {
+		placeholders := strings.Repeat("?,", len(kinds))
+		placeholders = placeholders[:len(placeholders)-1]
+		sqlText += ` AND r.context_kind IN (` + placeholders + `)`
+		for _, k := range kinds {
+			args = append(args, k)
+		}
+	}
+	sqlText += ` ORDER BY f.path, r.line, r.col LIMIT ?`
+	args = append(args, limit)
+
+	rows, err := s.db.Query(sqlText, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []RefRow
+	for rows.Next() {
+		var r RefRow
+		if err := rows.Scan(&r.ID, &r.FileID, &r.FilePath, &r.SymbolName, &r.Line, &r.Col, &r.ContextKind); err != nil {
+			return nil, err
+		}
+		out = append(out, r)
+	}
+	return out, rows.Err()
 }
 
 // SymbolsByName returns symbols whose bare name exactly matches q.

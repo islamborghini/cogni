@@ -161,7 +161,7 @@ func (w *Watcher) reindex(path string) {
 	if existing, err := w.store.FileSHA(rel); err == nil && existing == hashHex {
 		return
 	}
-	_, _ = indexFile(w.root, path, w.store)
+	_, _, _ = indexFile(w.root, path, w.store)
 }
 
 func (w *Watcher) deleteFile(path string) {

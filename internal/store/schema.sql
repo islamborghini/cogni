@@ -57,3 +57,14 @@ CREATE TRIGGER IF NOT EXISTS symbols_au AFTER UPDATE ON symbols BEGIN
     INSERT INTO symbols_fts(rowid, name, qualified, docstring)
     VALUES (new.id, new.name, new.qualified, new.docstring);
 END;
+
+CREATE TABLE IF NOT EXISTS refs (
+    id           INTEGER PRIMARY KEY,
+    file_id      INTEGER NOT NULL REFERENCES files(id) ON DELETE CASCADE,
+    symbol_name  TEXT NOT NULL,
+    line         INTEGER NOT NULL,
+    col          INTEGER NOT NULL,
+    context_kind TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_refs_name ON refs(symbol_name);
+CREATE INDEX IF NOT EXISTS idx_refs_file ON refs(file_id);
