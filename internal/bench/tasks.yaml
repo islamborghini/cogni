@@ -1,0 +1,62 @@
+# Cogni v0.1 benchmark task set.
+#
+# Methodology: ../../BENCHMARK.md
+# Target SHA is pinned before week-4 measurement; placeholder until then.
+#
+# Tasks must be drawn from real merged PRs / historical issues so success is
+# checkable against ground truth. Synthetic tasks are not allowed.
+
+target_repo: https://github.com/encode/httpx
+target_sha: TBD-PINNED-BEFORE-MEASUREMENT
+
+tasks:
+  # ---- explain family ---------------------------------------------------
+  - id: explain-transports
+    family: explain
+    prompt: |
+      In this httpx codebase, explain how transports are wired. Specifically:
+      what is the relationship between Client, AsyncClient, and the various
+      Transport classes? Where does the default transport come from?
+    description: |
+      Tests whether the agent orients in the package without reading every
+      file under httpx/_transports/. With Cogni, repo_overview + file_outline
+      should suffice; without Cogni, the agent typically reads 3-5 files.
+    success_criteria:
+      - output_contains: "HTTPTransport"
+      - output_contains: "AsyncHTTPTransport"
+      - output_contains: "BaseTransport"
+
+  # ---- bug-fix family ---------------------------------------------------
+  - id: bugfix-PLACEHOLDER
+    family: bug-fix
+    prompt: |
+      [PLACEHOLDER] Reproduce and fix a known bug. Replace before measurement.
+    description: |
+      Draw from a real merged PR in httpx with a clear before/after.
+    source_pr: TBD
+    success_criteria:
+      - tests_pass: tests/PLACEHOLDER
+
+  # ---- add-feature family ----------------------------------------------
+  - id: feature-PLACEHOLDER
+    family: add-feature
+    prompt: |
+      [PLACEHOLDER] Add a small feature matching a known PR. Replace before
+      measurement.
+    description: |
+      Should map to a real PR with a small, self-contained diff.
+    source_pr: TBD
+    success_criteria:
+      - function_added: httpx.PLACEHOLDER
+
+  # ---- refactor family --------------------------------------------------
+  - id: refactor-PLACEHOLDER
+    family: refactor
+    prompt: |
+      [PLACEHOLDER] Perform a rename across call sites. Replace before
+      measurement.
+    description: |
+      Tests find_references — without Cogni the agent greps; with Cogni it
+      should call find_references and edit each site directly.
+    success_criteria:
+      - file_modified: httpx/PLACEHOLDER.py
