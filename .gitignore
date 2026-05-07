@@ -5,6 +5,11 @@ architecture.png
 # Built binary
 /cogni
 
+# Local bench config (machine-specific paths)
+/bench-mcp.json
+/bench-report.md
+/bench-runs/
+
 # Goreleaser output
 /dist/
 

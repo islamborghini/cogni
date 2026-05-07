@@ -7,7 +7,7 @@
 # checkable against ground truth. Synthetic tasks are not allowed.
 
 target_repo: https://github.com/encode/httpx
-target_sha: TBD-PINNED-BEFORE-MEASUREMENT
+target_sha: 609df7ecc0f7cb10a1c998aa9c269bba77337c5f
 
 tasks:
   # ---- explain family ---------------------------------------------------
@@ -26,37 +26,4 @@ tasks:
       - output_contains: "AsyncHTTPTransport"
       - output_contains: "BaseTransport"
 
-  # ---- bug-fix family ---------------------------------------------------
-  - id: bugfix-PLACEHOLDER
-    family: bug-fix
-    prompt: |
-      [PLACEHOLDER] Reproduce and fix a known bug. Replace before measurement.
-    description: |
-      Draw from a real merged PR in httpx with a clear before/after.
-    source_pr: TBD
-    success_criteria:
-      - tests_pass: tests/PLACEHOLDER
-
-  # ---- add-feature family ----------------------------------------------
-  - id: feature-PLACEHOLDER
-    family: add-feature
-    prompt: |
-      [PLACEHOLDER] Add a small feature matching a known PR. Replace before
-      measurement.
-    description: |
-      Should map to a real PR with a small, self-contained diff.
-    source_pr: TBD
-    success_criteria:
-      - function_added: httpx.PLACEHOLDER
-
-  # ---- refactor family --------------------------------------------------
-  - id: refactor-PLACEHOLDER
-    family: refactor
-    prompt: |
-      [PLACEHOLDER] Perform a rename across call sites. Replace before
-      measurement.
-    description: |
-      Tests find_references — without Cogni the agent greps; with Cogni it
-      should call find_references and edit each site directly.
-    success_criteria:
-      - file_modified: httpx/PLACEHOLDER.py
+  
