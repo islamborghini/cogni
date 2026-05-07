@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"os"
 
@@ -10,10 +9,6 @@ import (
 
 // version is overwritten at build time via -ldflags "-X main.version=...".
 var version = "dev"
-
-// errNotImplemented is returned by subcommand stubs that have not yet been
-// wired up. Subcommands replace their RunE as the corresponding feature lands.
-var errNotImplemented = errors.New("not implemented yet")
 
 var rootCmd = &cobra.Command{
 	Use:     "cogni",
