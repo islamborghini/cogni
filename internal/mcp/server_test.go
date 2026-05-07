@@ -19,7 +19,7 @@ func TestServerRegistersFiveTools(t *testing.T) {
 	}
 	defer s.Close()
 
-	srv := New(s)
+	srv := New(s, t.TempDir())
 	c, err := mcpclient.NewInProcessClient(srv.MCP())
 	if err != nil {
 		t.Fatal(err)
@@ -64,7 +64,7 @@ func TestStubHandlersReturnJSON(t *testing.T) {
 	}
 	defer s.Close()
 
-	srv := New(s)
+	srv := New(s, t.TempDir())
 	c, err := mcpclient.NewInProcessClient(srv.MCP())
 	if err != nil {
 		t.Fatal(err)

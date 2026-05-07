@@ -20,21 +20,24 @@ import (
 // Version is reported to MCP clients during initialize.
 const Version = "0.1.0-dev"
 
-// Server holds the MCP server bound to a Cogni store.
+// Server holds the MCP server bound to a Cogni store and the repo root
+// (used by tools that read source from disk, e.g. symbol_source).
 type Server struct {
 	mcp   *server.MCPServer
 	store *store.Store
+	root  string
 }
 
-// New constructs an MCP server with all five Cogni tools registered as stubs.
-func New(s *store.Store) *Server {
+// New constructs an MCP server with all five Cogni tools registered. Root
+// must be the absolute path to the repository being served.
+func New(s *store.Store, root string) *Server {
 	m := server.NewMCPServer(
 		"cogni",
 		Version,
 		server.WithToolCapabilities(false),
 		server.WithRecovery(),
 	)
-	srv := &Server{mcp: m, store: s}
+	srv := &Server{mcp: m, store: s, root: root}
 	srv.registerTools()
 	return srv
 }
