@@ -116,20 +116,24 @@ func (s *Store) SymbolsByName(q string, limit int) ([]SymbolRow, error) {
 }
 
 // SymbolsFTS runs a trigram FTS5 query over name/qualified/docstring and
-// returns the matching symbol rows, ordered by relevance.
-func (s *Store) SymbolsFTS(q string, limit int) ([]SymbolRow, error) {
-	rows, err := s.db.Query(
-		`SELECT s.id, s.file_id, f.path, s.name, s.qualified, s.kind,
-		        s.start_line, s.end_line,
-		        IFNULL(s.signature, ''), IFNULL(s.docstring, '')
-		   FROM symbols_fts fts
-		   JOIN symbols s ON s.id = fts.rowid
-		   JOIN files   f ON f.id = s.file_id
-		  WHERE symbols_fts MATCH ?
-		  ORDER BY rank
-		  LIMIT ?`,
-		q, limit,
-	)
+// returns the matching symbol rows, ordered by relevance. When kind is
+// non-empty and not "any", results are restricted to that symbol kind.
+func (s *Store) SymbolsFTS(q, kind string, limit int) ([]SymbolRow, error) {
+	sqlText := `SELECT s.id, s.file_id, f.path, s.name, s.qualified, s.kind,
+	                   s.start_line, s.end_line,
+	                   IFNULL(s.signature, ''), IFNULL(s.docstring, '')
+	              FROM symbols_fts fts
+	              JOIN symbols s ON s.id = fts.rowid
+	              JOIN files   f ON f.id = s.file_id
+	             WHERE symbols_fts MATCH ?`
+	args := []any{q}
+	if kind != "" && kind != "any" {
+		sqlText += ` AND s.kind = ?`
+		args = append(args, kind)
+	}
+	sqlText += ` ORDER BY rank LIMIT ?`
+	args = append(args, limit)
+	rows, err := s.db.Query(sqlText, args...)
 	if err != nil {
 		return nil, err
 	}
