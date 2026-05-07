@@ -8,8 +8,11 @@
 package mcp
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/islamborghini/cogni/internal/store"
@@ -234,12 +237,110 @@ func (s *Server) handleSymbolSearch(ctx context.Context, req mcp.CallToolRequest
 }
 
 func (s *Server) handleSymbolSource(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	name := strings.TrimSpace(req.GetString("name", ""))
+	qualified := strings.TrimSpace(req.GetString("qualified", ""))
+	if name == "" && qualified == "" {
+		return mcp.NewToolResultError("name or qualified is required"), nil
+	}
+	contextLines := int(req.GetFloat("context_lines", 0))
+	if contextLines < 0 {
+		contextLines = 0
+	}
+	if contextLines > 20 {
+		contextLines = 20
+	}
+
+	var rows []store.SymbolRow
+	var err error
+	if qualified != "" {
+		rows, err = s.store.SymbolsByQualified(qualified, 10)
+	} else {
+		rows, err = s.store.SymbolsByName(name, 10)
+	}
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+	if len(rows) == 0 {
+		return jsonResult(map[string]any{
+			"name": name, "qualified": qualified, "matches": []any{},
+		})
+	}
+	if len(rows) > 1 {
+		// Ambiguous bare-name lookup: return disambiguation list, no source.
+		type cand struct {
+			Name      string `json:"name"`
+			Qualified string `json:"qualified"`
+			Kind      string `json:"kind"`
+			Path      string `json:"path"`
+			StartLine int    `json:"start_line"`
+			EndLine   int    `json:"end_line"`
+		}
+		out := make([]cand, 0, len(rows))
+		for _, r := range rows {
+			out = append(out, cand{r.Name, r.Qualified, r.Kind, r.FilePath, r.StartLine, r.EndLine})
+		}
+		return jsonResult(map[string]any{
+			"name":      name,
+			"qualified": qualified,
+			"ambiguous": true,
+			"matches":   out,
+		})
+	}
+
+	r := rows[0]
+	src, startOut, endOut, err := readLineRange(s.root, r.FilePath, r.StartLine, r.EndLine, contextLines)
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
 	return jsonResult(map[string]any{
-		"stub":      true,
-		"name":      req.GetString("name", ""),
-		"qualified": req.GetString("qualified", ""),
-		"source":    "",
+		"name":       r.Name,
+		"qualified":  r.Qualified,
+		"kind":       r.Kind,
+		"path":       r.FilePath,
+		"start_line": startOut,
+		"end_line":   endOut,
+		"signature":  r.Signature,
+		"source":     src,
 	})
+}
+
+// readLineRange returns the slice of lines [start-context, end+context] from
+// repo-relative path, clamped to file bounds. The returned start/end reflect
+// the actual span emitted (1-indexed).
+func readLineRange(root, relPath string, start, end, context int) (string, int, int, error) {
+	full := filepath.Join(root, relPath)
+	f, err := os.Open(full)
+	if err != nil {
+		return "", 0, 0, err
+	}
+	defer f.Close()
+	from := start - context
+	if from < 1 {
+		from = 1
+	}
+	to := end + context
+	scanner := bufio.NewScanner(f)
+	scanner.Buffer(make([]byte, 64*1024), 4*1024*1024)
+	var b strings.Builder
+	line := 0
+	for scanner.Scan() {
+		line++
+		if line < from {
+			continue
+		}
+		if line > to {
+			break
+		}
+		b.WriteString(scanner.Text())
+		b.WriteByte('\n')
+	}
+	if err := scanner.Err(); err != nil {
+		return "", 0, 0, err
+	}
+	if line < to {
+		to = line
+	}
+	return b.String(), from, to, nil
 }
 
 func (s *Server) handleFindReferences(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
