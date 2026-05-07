@@ -23,6 +23,7 @@ type Stats struct {
 	FilesIndexed int
 	FilesSkipped int
 	Symbols      int
+	Refs         int
 	Duration     time.Duration
 	Errors       []error
 }
@@ -63,14 +64,15 @@ func Build(root string, s *store.Store) (Stats, error) {
 			return nil
 		}
 		stats.FilesScanned++
-		n, err := indexFile(root, path, s)
+		nSyms, nRefs, err := indexFile(root, path, s)
 		if err != nil {
 			stats.FilesSkipped++
 			stats.Errors = append(stats.Errors, fmt.Errorf("%s: %w", path, err))
 			return nil
 		}
 		stats.FilesIndexed++
-		stats.Symbols += n
+		stats.Symbols += nSyms
+		stats.Refs += nRefs
 		return nil
 	})
 
@@ -78,15 +80,16 @@ func Build(root string, s *store.Store) (Stats, error) {
 	return stats, walkErr
 }
 
-// indexFile reads, hashes, parses, and writes one file. Returns symbol count.
-func indexFile(root, path string, s *store.Store) (int, error) {
+// indexFile reads, hashes, parses, and writes one file. Returns symbol and
+// reference counts.
+func indexFile(root, path string, s *store.Store) (int, int, error) {
 	info, err := os.Stat(path)
 	if err != nil {
-		return 0, err
+		return 0, 0, err
 	}
 	src, err := os.ReadFile(path)
 	if err != nil {
-		return 0, err
+		return 0, 0, err
 	}
 
 	sum := sha256.Sum256(src)
@@ -98,7 +101,11 @@ func indexFile(root, path string, s *store.Store) (int, error) {
 
 	syms, err := parse.ParsePython(src)
 	if err != nil {
-		return 0, fmt.Errorf("parse: %w", err)
+		return 0, 0, fmt.Errorf("parse: %w", err)
+	}
+	refs, err := parse.ParsePythonRefs(src)
+	if err != nil {
+		return 0, 0, fmt.Errorf("parse refs: %w", err)
 	}
 
 	fid, err := s.UpsertFile(store.FileRow{
@@ -110,12 +117,15 @@ func indexFile(root, path string, s *store.Store) (int, error) {
 		Language:  "python",
 	})
 	if err != nil {
-		return 0, fmt.Errorf("upsert file: %w", err)
+		return 0, 0, fmt.Errorf("upsert file: %w", err)
 	}
 	if err := s.ReplaceSymbols(fid, syms); err != nil {
-		return 0, fmt.Errorf("replace symbols: %w", err)
+		return 0, 0, fmt.Errorf("replace symbols: %w", err)
 	}
-	return len(syms), nil
+	if err := s.ReplaceRefs(fid, refs); err != nil {
+		return 0, 0, fmt.Errorf("replace refs: %w", err)
+	}
+	return len(syms), len(refs), nil
 }
 
 func countLines(src []byte) int {

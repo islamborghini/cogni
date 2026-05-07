@@ -80,6 +80,7 @@ func printStats(cmd *cobra.Command, root, dbPath string, st index.Stats) {
 	fmt.Fprintf(w, "indexed:   %d\n", st.FilesIndexed)
 	fmt.Fprintf(w, "skipped:   %d\n", st.FilesSkipped)
 	fmt.Fprintf(w, "symbols:   %d\n", st.Symbols)
+	fmt.Fprintf(w, "refs:      %d\n", st.Refs)
 	fmt.Fprintf(w, "duration:  %s\n", st.Duration.Round(1e6))
 	if n := len(st.Errors); n > 0 {
 		fmt.Fprintf(w, "errors:    %d (showing up to 5)\n", n)
