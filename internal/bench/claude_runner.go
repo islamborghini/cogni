@@ -27,6 +27,10 @@ type ClaudeRunnerConfig struct {
 	// RunsDir, if non-empty, receives a per-run JSONL transcript named
 	// "<task>-<condition>-<run>.jsonl" — the raw stream-json output.
 	RunsDir string
+	// SystemPrompt, if non-empty, is appended via --append-system-prompt
+	// in the cogni condition only. Lets the harness simulate a CLAUDE.md
+	// nudge that steers the agent toward cogni's tools.
+	SystemPrompt string
 }
 
 // ClaudeRunner is a Runner that drives the Claude Code SDK in headless mode
@@ -58,6 +62,9 @@ func (r *ClaudeRunner) Run(ctx context.Context, task Task, cond Condition, runIn
 	}
 	if cond == ConditionCogni && r.Cfg.MCPConfigPath != "" {
 		args = append(args, "--mcp-config", r.Cfg.MCPConfigPath)
+	}
+	if cond == ConditionCogni && r.Cfg.SystemPrompt != "" {
+		args = append(args, "--append-system-prompt", r.Cfg.SystemPrompt)
 	}
 
 	cmd := exec.CommandContext(ctx, cmdName, args...)
