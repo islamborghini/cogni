@@ -18,6 +18,7 @@ var benchFlags struct {
 	mcpConfig string
 	model     string
 	claudeCmd string
+	saveRuns  string
 }
 
 var benchCmd = &cobra.Command{
@@ -37,6 +38,7 @@ func init() {
 	benchCmd.Flags().StringVar(&benchFlags.mcpConfig, "mcp-config", "", "path to MCP config registering cogni (used in the cogni condition)")
 	benchCmd.Flags().StringVar(&benchFlags.model, "model", "", "override Claude model (default: SDK default)")
 	benchCmd.Flags().StringVar(&benchFlags.claudeCmd, "claude-cmd", "claude", "path to the claude CLI")
+	benchCmd.Flags().StringVar(&benchFlags.saveRuns, "save-runs", "", "directory to write per-run stream-json transcripts")
 	rootCmd.AddCommand(benchCmd)
 }
 
@@ -62,6 +64,7 @@ func runBench(cmd *cobra.Command, args []string) error {
 			ClaudeCmd:     benchFlags.claudeCmd,
 			MCPConfigPath: benchFlags.mcpConfig,
 			Model:         benchFlags.model,
+			RunsDir:       benchFlags.saveRuns,
 		},
 	}
 
