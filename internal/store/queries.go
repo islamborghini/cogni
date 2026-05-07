@@ -71,7 +71,7 @@ func (s *Store) ReplaceSymbols(fileID int64, syms []parse.Symbol) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	if _, err := tx.Exec(`DELETE FROM symbols WHERE file_id=?`, fileID); err != nil {
 		return fmt.Errorf("clear symbols: %w", err)

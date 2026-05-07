@@ -34,7 +34,7 @@ func TestWatcherReindexesOnWrite(t *testing.T) {
 	w.debounce = 50 * time.Millisecond
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	go w.Run(ctx)
+	go func() { _ = w.Run(ctx) }()
 
 	if err := os.WriteFile(pyPath, []byte("def hello():\n    return 1\n\ndef added():\n    return 2\n"), 0o644); err != nil {
 		t.Fatal(err)
@@ -83,7 +83,7 @@ func TestWatcherShortCircuitsOnUnchangedContent(t *testing.T) {
 	w.debounce = 30 * time.Millisecond
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	go w.Run(ctx)
+	go func() { _ = w.Run(ctx) }()
 
 	// Re-write identical bytes. The sha won't change → short-circuit hits.
 	if err := os.WriteFile(pyPath, original, 0o644); err != nil {
@@ -124,7 +124,7 @@ func TestWatcherDeletesRowOnRemove(t *testing.T) {
 	w.debounce = 30 * time.Millisecond
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	go w.Run(ctx)
+	go func() { _ = w.Run(ctx) }()
 
 	if err := os.Remove(pyPath); err != nil {
 		t.Fatal(err)
