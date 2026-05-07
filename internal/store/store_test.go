@@ -63,7 +63,7 @@ func TestUpsertAndReplaceSymbols(t *testing.T) {
 	}
 
 	// FTS5 trigram should match a substring of 'Greeter'.
-	fts, err := s.SymbolsFTS("greet", 10)
+	fts, err := s.SymbolsFTS("greet", "any", 10)
 	if err != nil {
 		t.Fatalf("SymbolsFTS: %v", err)
 	}

@@ -10,6 +10,7 @@ package mcp
 import (
 	"context"
 	"encoding/json"
+	"strings"
 
 	"github.com/islamborghini/cogni/internal/store"
 	"github.com/mark3labs/mcp-go/mcp"
@@ -187,11 +188,46 @@ func (s *Server) handleFileOutline(ctx context.Context, req mcp.CallToolRequest)
 }
 
 func (s *Server) handleSymbolSearch(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	return jsonResult(map[string]any{
-		"stub":    true,
-		"query":   req.GetString("query", ""),
-		"matches": []any{},
-	})
+	q := strings.TrimSpace(req.GetString("query", ""))
+	if q == "" {
+		return mcp.NewToolResultError("query is required"), nil
+	}
+	kind := req.GetString("kind", "any")
+	limit := int(req.GetFloat("limit", 20))
+	if limit <= 0 {
+		limit = 20
+	}
+	if limit > 100 {
+		limit = 100
+	}
+
+	// Wrap as an FTS5 phrase so tokenizer specials (`_`, `:`, `*`, parens,
+	// `AND`/`OR`/`NOT`) in user input can't break the MATCH grammar. Inner
+	// quotes are escaped by doubling.
+	ftsQ := `"` + strings.ReplaceAll(q, `"`, `""`) + `"`
+
+	rows, err := s.store.SymbolsFTS(ftsQ, kind, limit)
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+	type match struct {
+		Name      string `json:"name"`
+		Qualified string `json:"qualified"`
+		Kind      string `json:"kind"`
+		Path      string `json:"path"`
+		StartLine int    `json:"start_line"`
+		EndLine   int    `json:"end_line"`
+		Signature string `json:"signature,omitempty"`
+	}
+	out := make([]match, 0, len(rows))
+	for _, r := range rows {
+		out = append(out, match{
+			Name: r.Name, Qualified: r.Qualified, Kind: r.Kind,
+			Path: r.FilePath, StartLine: r.StartLine, EndLine: r.EndLine,
+			Signature: r.Signature,
+		})
+	}
+	return jsonResult(map[string]any{"query": q, "kind": kind, "matches": out})
 }
 
 func (s *Server) handleSymbolSource(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
