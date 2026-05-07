@@ -34,20 +34,20 @@ type Criterion struct {
 // Task is one benchmark task. The same Task is run twice per agent (baseline
 // vs with-Cogni) for n runs each.
 type Task struct {
-	ID               string      `yaml:"id"`
-	Family           Family      `yaml:"family"`
-	Prompt           string      `yaml:"prompt"`
-	Description      string      `yaml:"description,omitempty"`
-	SuccessCriteria  []Criterion `yaml:"success_criteria"`
-	SourcePR         string      `yaml:"source_pr,omitempty"`
-	SourceIssue      string      `yaml:"source_issue,omitempty"`
+	ID              string      `yaml:"id"`
+	Family          Family      `yaml:"family"`
+	Prompt          string      `yaml:"prompt"`
+	Description     string      `yaml:"description,omitempty"`
+	SuccessCriteria []Criterion `yaml:"success_criteria"`
+	SourcePR        string      `yaml:"source_pr,omitempty"`
+	SourceIssue     string      `yaml:"source_issue,omitempty"`
 }
 
 // TaskSet is the YAML root: a list of tasks plus shared metadata.
 type TaskSet struct {
-	TargetRepo  string `yaml:"target_repo"`
-	TargetSHA   string `yaml:"target_sha"`
-	Tasks       []Task `yaml:"tasks"`
+	TargetRepo string `yaml:"target_repo"`
+	TargetSHA  string `yaml:"target_sha"`
+	Tasks      []Task `yaml:"tasks"`
 }
 
 // LoadTasks parses a task definition file. Returns a fully-populated TaskSet
