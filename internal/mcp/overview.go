@@ -11,9 +11,9 @@ import (
 // directory at depth ≤ maxDepth; deeper files are aggregated into the closest
 // ancestor's FileCount.
 type PackageNode struct {
-	Path      string         `json:"path"`
-	Name      string         `json:"name"`
-	FileCount int            `json:"file_count"`
+	Path       string        `json:"path"`
+	Name       string        `json:"name"`
+	FileCount  int           `json:"file_count"`
 	TopSymbols []OverviewSym `json:"top_symbols,omitempty"`
 }
 

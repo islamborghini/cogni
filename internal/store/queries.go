@@ -10,13 +10,13 @@ import (
 
 // FileRow describes a row in the files table.
 type FileRow struct {
-	ID         int64
-	Path       string
-	SHA256     string
-	MtimeNs    int64
-	SizeBytes  int64
-	LineCount  int
-	Language   string
+	ID          int64
+	Path        string
+	SHA256      string
+	MtimeNs     int64
+	SizeBytes   int64
+	LineCount   int
+	Language    string
 	LastIndexed int64
 }
 
