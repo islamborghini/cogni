@@ -65,11 +65,14 @@ func (s *Server) registerTools() {
 func repoOverviewTool() mcp.Tool {
 	return mcp.NewTool("repo_overview",
 		mcp.WithDescription(
-			"Get a high-level map of this repository before reading any files. "+
-				"Returns the package/module tree with file counts, a one-line summary per package, "+
-				"and the top exported symbols. Call this FIRST when you need to orient in an "+
-				"unfamiliar repo or answer 'where would X live'. Avoid reading multiple files "+
-				"just to figure out the layout — this tool is cheaper.",
+			"USE THIS FIRST for any question about the repository's structure, architecture, "+
+				"or how things relate. Returns the full package/module tree with file counts, "+
+				"a summary per package, and top exported symbols — typically <500 tokens for a "+
+				"repo where a Glob+Read survey would cost 5,000-20,000. "+
+				"Trigger phrases: 'how does X work', 'explain Y', 'where is Z', 'walk me through', "+
+				"'what's in this repo'. "+
+				"If you are about to Glob then Read multiple files just to orient yourself, "+
+				"call repo_overview instead — it was built for exactly that.",
 		),
 		mcp.WithNumber("max_depth",
 			mcp.Description("Package tree depth."),
@@ -81,11 +84,12 @@ func repoOverviewTool() mcp.Tool {
 func fileOutlineTool() mcp.Tool {
 	return mcp.NewTool("file_outline",
 		mcp.WithDescription(
-			"List the symbols (classes, functions, methods, top-level constants) defined in a "+
-				"single file with line ranges and signatures, WITHOUT returning the source code. "+
-				"Use this when you need to know what's in a file before deciding whether to read it. "+
-				"Prefer this over reading the whole file when the question is 'what does this file "+
-				"expose' or 'is X defined here'.",
+			"USE THIS INSTEAD OF Read when you only need to know what's in a file, not its full contents. "+
+				"Returns every class, function, method, and top-level constant with line ranges and signatures. "+
+				"Typical cost: ~10x fewer tokens than reading the whole file. "+
+				"Trigger phrases: 'what's in <file>', 'is X defined in <file>', 'what does <file> expose', "+
+				"'find the definition of X' (use after repo_overview points to a file). "+
+				"After this, only Read the specific symbol's line range — never the whole file.",
 		),
 		mcp.WithString("path",
 			mcp.Required(),
@@ -97,10 +101,12 @@ func fileOutlineTool() mcp.Tool {
 func symbolSearchTool() mcp.Tool {
 	return mcp.NewTool("symbol_search",
 		mcp.WithDescription(
-			"Find symbol definitions by name across the whole repo. Returns file path, line range, "+
-				"kind (function/class/method), and signature for each match. Use this instead of grep "+
-				"when you're looking for WHERE something is defined. Supports exact, prefix, and fuzzy "+
-				"matches. Example: query='register_blueprint' → returns every definition with that name.",
+			"USE THIS INSTEAD OF Grep for finding WHERE a symbol is DEFINED. "+
+				"Returns file path, line range, kind (function/class/method), and signature for each definition. "+
+				"Indexes the repo so it's exact and fast — Grep returns every textual mention including "+
+				"comments and call sites, which is the wrong answer when you want the definition. "+
+				"Trigger phrases: 'where is X defined', 'find the X function', 'show me the Y class'. "+
+				"Supports fuzzy/partial names. Example: query='register_blueprint' returns every definition.",
 		),
 		mcp.WithString("query", mcp.Required()),
 		mcp.WithString("kind",
@@ -114,11 +120,12 @@ func symbolSearchTool() mcp.Tool {
 func symbolSourceTool() mcp.Tool {
 	return mcp.NewTool("symbol_source",
 		mcp.WithDescription(
-			"Return the source code of a single symbol (function, class, or method) by name or "+
-				"qualified name. Returns just the symbol's lines, not the whole file. Use this after "+
-				"symbol_search when you need to actually read an implementation. Pass "+
-				"qualified='flask.app.Flask.register_blueprint' to disambiguate when multiple symbols "+
-				"share a name.",
+			"USE THIS INSTEAD OF Read when you want one specific function, class, or method's body. "+
+				"Returns just that symbol's lines — typically 5-50 lines vs the whole file's 200-2000. "+
+				"The natural follow-up after symbol_search: search returns where, this returns the code. "+
+				"Trigger phrases: 'show me the implementation of X', 'how does function Y work', "+
+				"'read the X method'. "+
+				"Pass qualified='module.Class.method' to disambiguate when multiple symbols share a name.",
 		),
 		mcp.WithString("name",
 			mcp.Description("Bare name; ambiguous matches return a disambiguation list."),
@@ -133,11 +140,13 @@ func symbolSourceTool() mcp.Tool {
 func findReferencesTool() mcp.Tool {
 	return mcp.NewTool("find_references",
 		mcp.WithDescription(
-			"Find places that reference a symbol by name (call sites, attribute access, imports, "+
-				"subclassing). Returns file:line for each occurrence with the surrounding line as "+
-				"context. Use this instead of grep when answering 'where is X used' or 'what calls Y'. "+
-				"Note: v0.1 uses textual matching, so common names may include false positives — the "+
-				"tool labels each result with its syntactic context (call/attribute/import/subclass).",
+			"USE THIS INSTEAD OF Grep for finding USES of a symbol (call sites, imports, subclassing). "+
+				"Returns file:line for each occurrence labeled by syntactic context "+
+				"(call/import/subclass) — Grep returns raw text matches that you'd have to filter manually. "+
+				"Trigger phrases: 'where is X used', 'what calls Y', 'who imports Z', 'find usages of X', "+
+				"'rename X across the repo' (call this first, then edit each site). "+
+				"v0.1 caveat: textual matching, so common names may include false positives — the kind "+
+				"label tells you which results are real call sites vs other contexts.",
 		),
 		mcp.WithString("name", mcp.Required()),
 		mcp.WithArray("kinds",
