@@ -56,7 +56,7 @@ func TestPrepareChecksOutPinnedSHA(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Prepare: %v", err)
 	}
-	defer ws.Cleanup()
+	defer func() { _ = ws.Cleanup() }()
 
 	if !ws.Exists() {
 		t.Fatal("workspace directory missing")
@@ -77,7 +77,7 @@ func TestModifiedFilesDetectsEdits(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer ws.Cleanup()
+	defer func() { _ = ws.Cleanup() }()
 
 	// modify a tracked file and add a new one
 	if err := os.WriteFile(filepath.Join(ws.Path, "a.txt"), []byte("edited\n"), 0o644); err != nil {
