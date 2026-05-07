@@ -11,15 +11,18 @@ import (
 )
 
 var benchFlags struct {
-	tasks     string
-	runs      int
-	list      bool
-	report    string
-	mcpConfig string
-	model     string
-	claudeCmd string
-	saveRuns  string
+	tasks        string
+	runs         int
+	list         bool
+	report       string
+	mcpConfig    string
+	model        string
+	claudeCmd    string
+	saveRuns     string
+	systemPrompt string
 }
+
+const defaultSystemPrompt = "For exploring this repository's structure and code, prefer the cogni MCP tools (mcp__cogni__repo_overview, mcp__cogni__file_outline, mcp__cogni__symbol_search, mcp__cogni__symbol_source, mcp__cogni__find_references) over Glob/Grep/Read. Start with mcp__cogni__repo_overview for any architecture or 'how does X work' question."
 
 var benchCmd = &cobra.Command{
 	Use:   "bench",
@@ -39,6 +42,7 @@ func init() {
 	benchCmd.Flags().StringVar(&benchFlags.model, "model", "", "override Claude model (default: SDK default)")
 	benchCmd.Flags().StringVar(&benchFlags.claudeCmd, "claude-cmd", "claude", "path to the claude CLI")
 	benchCmd.Flags().StringVar(&benchFlags.saveRuns, "save-runs", "", "directory to write per-run stream-json transcripts")
+	benchCmd.Flags().StringVar(&benchFlags.systemPrompt, "system-prompt", defaultSystemPrompt, "appended via --append-system-prompt in the cogni condition; pass \"\" to disable")
 	rootCmd.AddCommand(benchCmd)
 }
 
@@ -65,6 +69,7 @@ func runBench(cmd *cobra.Command, args []string) error {
 			MCPConfigPath: benchFlags.mcpConfig,
 			Model:         benchFlags.model,
 			RunsDir:       benchFlags.saveRuns,
+			SystemPrompt:  benchFlags.systemPrompt,
 		},
 	}
 
