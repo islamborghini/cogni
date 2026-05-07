@@ -8,8 +8,8 @@ import (
 	"testing"
 
 	"github.com/islamborghini/cogni/internal/store"
-	mcppkg "github.com/mark3labs/mcp-go/mcp"
 	mcpclient "github.com/mark3labs/mcp-go/client"
+	mcppkg "github.com/mark3labs/mcp-go/mcp"
 )
 
 func TestServerRegistersFiveTools(t *testing.T) {

@@ -10,13 +10,13 @@ import (
 
 // FileRow describes a row in the files table.
 type FileRow struct {
-	ID         int64
-	Path       string
-	SHA256     string
-	MtimeNs    int64
-	SizeBytes  int64
-	LineCount  int
-	Language   string
+	ID          int64
+	Path        string
+	SHA256      string
+	MtimeNs     int64
+	SizeBytes   int64
+	LineCount   int
+	Language    string
 	LastIndexed int64
 }
 
@@ -71,7 +71,7 @@ func (s *Store) ReplaceSymbols(fileID int64, syms []parse.Symbol) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	if _, err := tx.Exec(`DELETE FROM symbols WHERE file_id=?`, fileID); err != nil {
 		return fmt.Errorf("clear symbols: %w", err)

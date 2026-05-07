@@ -29,16 +29,16 @@ type Stats struct {
 
 // skipDirs are directory names we never descend into.
 var skipDirs = map[string]bool{
-	".git":         true,
-	"__pycache__":  true,
-	".venv":        true,
-	"venv":         true,
-	".tox":         true,
-	"node_modules": true,
-	".mypy_cache":  true,
+	".git":          true,
+	"__pycache__":   true,
+	".venv":         true,
+	"venv":          true,
+	".tox":          true,
+	"node_modules":  true,
+	".mypy_cache":   true,
 	".pytest_cache": true,
-	"dist":         true,
-	"build":        true,
+	"dist":          true,
+	"build":         true,
 }
 
 // Build walks root and indexes every Python file into s. Returns stats and

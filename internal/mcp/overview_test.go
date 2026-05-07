@@ -18,8 +18,8 @@ func fixture(t *testing.T) (string, *store.Store, *mcpclient.Client) {
 	t.Helper()
 	root := t.TempDir()
 	files := map[string]string{
-		"a.py": "def hello():\n    return 1\n\ndef _private():\n    return 2\n",
-		"pkg/b.py": "class Greeter:\n    def greet(self):\n        return 'hi'\n",
+		"a.py":         "def hello():\n    return 1\n\ndef _private():\n    return 2\n",
+		"pkg/b.py":     "class Greeter:\n    def greet(self):\n        return 'hi'\n",
 		"pkg/sub/c.py": "def worker():\n    return 3\n",
 	}
 	for rel, body := range files {
