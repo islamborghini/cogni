@@ -55,6 +55,6 @@ func runServe(cmd *cobra.Command, args []string) error {
 	}
 	defer s.Close()
 
-	srv := mcp.New(s)
+	srv := mcp.New(s, abs)
 	return srv.ServeStdio()
 }

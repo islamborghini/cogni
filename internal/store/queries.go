@@ -96,6 +96,26 @@ func (s *Store) ReplaceSymbols(fileID int64, syms []parse.Symbol) error {
 	return tx.Commit()
 }
 
+// SymbolsByQualified returns symbols whose fully-qualified name matches q
+// exactly. Used by symbol_source for unambiguous lookup.
+func (s *Store) SymbolsByQualified(q string, limit int) ([]SymbolRow, error) {
+	rows, err := s.db.Query(
+		`SELECT s.id, s.file_id, f.path, s.name, s.qualified, s.kind,
+		        s.start_line, s.end_line,
+		        IFNULL(s.signature, ''), IFNULL(s.docstring, '')
+		   FROM symbols s
+		   JOIN files f ON f.id = s.file_id
+		  WHERE s.qualified = ?
+		  ORDER BY f.path, s.start_line
+		  LIMIT ?`,
+		q, limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return scanSymbols(rows)
+}
+
 // SymbolsByName returns symbols whose bare name exactly matches q.
 func (s *Store) SymbolsByName(q string, limit int) ([]SymbolRow, error) {
 	rows, err := s.db.Query(

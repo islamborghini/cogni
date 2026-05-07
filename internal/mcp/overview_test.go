@@ -41,7 +41,7 @@ func fixture(t *testing.T) (string, *store.Store, *mcpclient.Client) {
 		t.Fatal(err)
 	}
 
-	srv := New(s)
+	srv := New(s, root)
 	c, err := mcpclient.NewInProcessClient(srv.MCP())
 	if err != nil {
 		t.Fatal(err)
