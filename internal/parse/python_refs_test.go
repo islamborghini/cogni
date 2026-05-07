@@ -18,13 +18,13 @@ class Foo(Base, mixins.Mixed):
 	}
 
 	want := map[string]RefKind{
-		"os":      RefImport,
-		"List":    RefImport,
+		"os":       RefImport,
+		"List":     RefImport,
 		"Optional": RefImport,
-		"helper":  RefCall, // also import; both should appear
-		"Base":    RefSubclass,
-		"Mixed":   RefSubclass,
-		"join":    RefCall,
+		"helper":   RefCall, // also import; both should appear
+		"Base":     RefSubclass,
+		"Mixed":    RefSubclass,
+		"join":     RefCall,
 	}
 	seen := map[string]map[RefKind]bool{}
 	for _, r := range refs {
