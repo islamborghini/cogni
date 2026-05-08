@@ -20,9 +20,21 @@ var benchFlags struct {
 	claudeCmd    string
 	saveRuns     string
 	systemPrompt string
+	claudeMD     string
 }
 
-const defaultSystemPrompt = "For exploring this repository's structure and code, prefer the cogni MCP tools (mcp__cogni__repo_overview, mcp__cogni__file_outline, mcp__cogni__symbol_search, mcp__cogni__symbol_source, mcp__cogni__find_references) over Glob/Grep/Read. Start with mcp__cogni__repo_overview for any architecture or 'how does X work' question."
+const defaultClaudeMD = `# Repository tooling
+
+This repository has the **cogni** MCP server registered with these tools:
+
+- ` + "`mcp__cogni__repo_overview`" + ` — high-level package map. Call FIRST for any architecture / "how does X work" question.
+- ` + "`mcp__cogni__file_outline`" + ` — list symbols in a file without returning source. Use INSTEAD OF Read when you only need to know what a file exposes.
+- ` + "`mcp__cogni__symbol_search`" + ` — find where a symbol is defined. Use INSTEAD OF Grep for definition lookups.
+- ` + "`mcp__cogni__symbol_source`" + ` — return one symbol's body. Use INSTEAD OF Read after symbol_search.
+- ` + "`mcp__cogni__find_references`" + ` — find usages of a symbol. Use INSTEAD OF Grep when answering "where is X used".
+
+For code exploration tasks, **prefer the cogni tools** over Glob / Grep / Read. They return structured, scoped results and use 5-10x fewer tokens for the same answer.
+`
 
 var benchCmd = &cobra.Command{
 	Use:   "bench",
@@ -42,7 +54,8 @@ func init() {
 	benchCmd.Flags().StringVar(&benchFlags.model, "model", "", "override Claude model (default: SDK default)")
 	benchCmd.Flags().StringVar(&benchFlags.claudeCmd, "claude-cmd", "claude", "path to the claude CLI")
 	benchCmd.Flags().StringVar(&benchFlags.saveRuns, "save-runs", "", "directory to write per-run stream-json transcripts")
-	benchCmd.Flags().StringVar(&benchFlags.systemPrompt, "system-prompt", defaultSystemPrompt, "appended via --append-system-prompt in the cogni condition; pass \"\" to disable")
+	benchCmd.Flags().StringVar(&benchFlags.systemPrompt, "system-prompt", "", "appended via --append-system-prompt in the cogni condition")
+	benchCmd.Flags().StringVar(&benchFlags.claudeMD, "claude-md", defaultClaudeMD, "CLAUDE.md content written into the cogni-condition workspace; pass \"\" to disable")
 	rootCmd.AddCommand(benchCmd)
 }
 
@@ -64,6 +77,7 @@ func runBench(cmd *cobra.Command, args []string) error {
 	opts := bench.HarnessOptions{
 		RunsPerCondition: benchFlags.runs,
 		Progress:         cmd.ErrOrStderr(),
+		ClaudeMD:         benchFlags.claudeMD,
 		RunnerCfg: bench.ClaudeRunnerConfig{
 			ClaudeCmd:     benchFlags.claudeCmd,
 			MCPConfigPath: benchFlags.mcpConfig,

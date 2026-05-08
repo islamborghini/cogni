@@ -24,6 +24,10 @@ type HarnessOptions struct {
 	RunnerCfg ClaudeRunnerConfig
 	// Progress, if non-nil, receives one line per completed run.
 	Progress io.Writer
+	// ClaudeMD, if non-empty, is written to <workspace>/CLAUDE.md before
+	// the cogni-condition agent run. CLAUDE.md is Claude Code's documented
+	// per-project customization channel and outranks --append-system-prompt.
+	ClaudeMD string
 }
 
 // runOneFn executes a single (task, condition, run-index) and returns a Score.
@@ -91,6 +95,19 @@ func realRunOne(ctx context.Context, set *TaskSet, task Task, cond Condition, ru
 					Err:        fmt.Errorf("index workspace: %w", err),
 					DurationMS: time.Since(start).Milliseconds(),
 				},
+			}
+		}
+		if opts.ClaudeMD != "" {
+			if err := os.WriteFile(filepath.Join(ws.Path, "CLAUDE.md"), []byte(opts.ClaudeMD), 0o644); err != nil {
+				return Score{
+					Run: RunResult{
+						TaskID:     task.ID,
+						Condition:  cond,
+						RunIndex:   runIndex,
+						Err:        fmt.Errorf("write CLAUDE.md: %w", err),
+						DurationMS: time.Since(start).Milliseconds(),
+					},
+				}
 			}
 		}
 	}
