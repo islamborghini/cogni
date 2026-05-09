@@ -151,4 +151,14 @@ func logProgress(w io.Writer, s Score) {
 	fmt.Fprintf(w, "[%s] %s/%s run=%d tokens=%d/%d duration=%dms\n",
 		status, s.Run.TaskID, s.Run.Condition, s.Run.RunIndex,
 		s.Run.InputTokens, s.Run.OutputTokens, s.Run.DurationMS)
+	if s.Pass {
+		return
+	}
+	if s.Run.Err != nil {
+		fmt.Fprintf(w, "  runner error: %s\n", s.Run.Err)
+		return
+	}
+	for _, detail := range criterionFailureDetails(s.Criteria) {
+		fmt.Fprintf(w, "  %s\n", detail)
+	}
 }

@@ -72,3 +72,36 @@ func TestWriteReportOverallMeanIsAverageOfReductions(t *testing.T) {
 		t.Errorf("expected mean of 30%% in output:\n%s", buf.String())
 	}
 }
+
+func TestWriteReportIncludesFailureDetails(t *testing.T) {
+	summaries := []TaskSummary{
+		{
+			TaskID:   "bug",
+			Family:   FamilyBugFix,
+			Baseline: CondStats{Runs: 1, PassCount: 0},
+			Cogni:    CondStats{Runs: 1, PassCount: 1},
+		},
+	}
+	scores := []Score{
+		{
+			Run: RunResult{TaskID: "bug", Condition: ConditionBaseline, RunIndex: 0},
+			Criteria: []CriterionResult{
+				{
+					Criterion: Criterion{TestsPass: "tests/test_bug.py::test_case"},
+					Status:    StatusFail,
+					Detail:    "pytest failed: exit status 1",
+				},
+			},
+		},
+	}
+	var buf bytes.Buffer
+	if err := WriteReport(&buf, ReportMeta{GeneratedAt: time.Now()}, summaries, scores...); err != nil {
+		t.Fatal(err)
+	}
+	out := buf.String()
+	for _, want := range []string{"## Failed runs", "`bug/baseline/0`", "tests_pass=", "pytest failed"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("output missing %q\n--- output ---\n%s", want, out)
+		}
+	}
+}

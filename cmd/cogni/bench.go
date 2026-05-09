@@ -106,7 +106,7 @@ func runBench(cmd *cobra.Command, args []string) error {
 		GeneratedAt:      time.Now(),
 		CogniVersion:     version,
 	}
-	if err := bench.WriteReport(f, meta, summaries); err != nil {
+	if err := bench.WriteReport(f, meta, summaries, scores...); err != nil {
 		return fmt.Errorf("write report: %w", err)
 	}
 

@@ -3,6 +3,7 @@ package bench
 import (
 	"fmt"
 	"io"
+	"strings"
 	"time"
 )
 
@@ -18,7 +19,7 @@ type ReportMeta struct {
 
 // WriteReport emits a markdown bench report to w. Pure formatting; no I/O
 // other than w.Write. Callers are responsible for opening / closing files.
-func WriteReport(w io.Writer, meta ReportMeta, summaries []TaskSummary) error {
+func WriteReport(w io.Writer, meta ReportMeta, summaries []TaskSummary, scores ...Score) error {
 	fmt.Fprintln(w, "# Cogni benchmark report")
 	fmt.Fprintln(w)
 	fmt.Fprintf(w, "- **Target repo:** %s\n", meta.TargetRepo)
@@ -53,8 +54,73 @@ func WriteReport(w io.Writer, meta ReportMeta, summaries []TaskSummary) error {
 		)
 	}
 	fmt.Fprintln(w)
+	writeFailures(w, scores)
 	fmt.Fprintln(w, "_Methodology: see [BENCHMARK.md](./BENCHMARK.md)._")
 	return nil
+}
+
+func writeFailures(w io.Writer, scores []Score) {
+	var failures []Score
+	for _, s := range scores {
+		if !s.Pass {
+			failures = append(failures, s)
+		}
+	}
+	if len(failures) == 0 {
+		return
+	}
+
+	fmt.Fprintln(w, "## Failed runs")
+	fmt.Fprintln(w)
+	for _, s := range failures {
+		fmt.Fprintf(w, "- `%s/%s/%d`", s.Run.TaskID, s.Run.Condition, s.Run.RunIndex)
+		if s.Run.Err != nil {
+			fmt.Fprintf(w, ": runner error: %s\n", s.Run.Err)
+			continue
+		}
+		details := criterionFailureDetails(s.Criteria)
+		if len(details) == 0 {
+			fmt.Fprintln(w, ": no criteria passed")
+			continue
+		}
+		fmt.Fprintf(w, ": %s\n", strings.Join(details, "; "))
+	}
+	fmt.Fprintln(w)
+}
+
+func criterionFailureDetails(criteria []CriterionResult) []string {
+	var out []string
+	for _, cr := range criteria {
+		switch cr.Status {
+		case StatusFail:
+			out = append(out, "FAIL "+criterionName(cr.Criterion)+detailSuffix(cr.Detail))
+		case StatusSkipped:
+			out = append(out, "SKIP "+criterionName(cr.Criterion)+detailSuffix(cr.Detail))
+		}
+	}
+	return out
+}
+
+func criterionName(c Criterion) string {
+	switch {
+	case c.OutputContains != "":
+		return "output_contains=" + quote(c.OutputContains)
+	case c.FileModified != "":
+		return "file_modified=" + quote(c.FileModified)
+	case c.TestsPass != "":
+		return "tests_pass=" + quote(c.TestsPass)
+	case c.FunctionAdded != "":
+		return "function_added=" + quote(c.FunctionAdded)
+	default:
+		return "empty"
+	}
+}
+
+func detailSuffix(detail string) string {
+	if detail == "" {
+		return ""
+	}
+	return " (" + detail + ")"
 }
 
 func overallReduction(s []TaskSummary) float64 {
