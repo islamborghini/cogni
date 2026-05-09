@@ -105,6 +105,7 @@ func checkCriterion(c Criterion, run RunResult) CriterionResult {
 }
 
 var runTestsPass = runPytestCriterion
+var runCommand = runBenchCommand
 
 func checkTestsPass(c Criterion, run RunResult) CriterionResult {
 	if strings.TrimSpace(c.TestsPass) == "" {
@@ -183,17 +184,26 @@ func runPytestCriterion(workspace, node string) (string, error) {
 }
 
 func ensureTestVenv(workspace string) (string, error) {
-	python := venvPython(filepath.Join(workspace, ".cogni-test-venv"))
-	if _, err := os.Stat(python); err == nil {
+	venv := filepath.Join(workspace, ".cogni-test-venv")
+	python := venvPython(venv)
+	marker := filepath.Join(venv, ".cogni-deps-installed")
+	if _, err := os.Stat(marker); err == nil {
 		return python, nil
 	} else if !os.IsNotExist(err) {
 		return "", err
 	}
-	if out, err := runBenchCommand(5*time.Minute, workspace, "python3", "-m", "venv", ".cogni-test-venv"); err != nil {
-		return "", fmt.Errorf("create test venv: %w: %s", err, compactString(out))
+	if _, err := os.Stat(python); os.IsNotExist(err) {
+		if out, err := runCommand(5*time.Minute, workspace, "python3", "-m", "venv", ".cogni-test-venv"); err != nil {
+			return "", fmt.Errorf("create test venv: %w: %s", err, compactString(out))
+		}
+	} else if err != nil {
+		return "", err
 	}
-	if out, err := runBenchCommand(10*time.Minute, workspace, python, "-m", "pip", "install", "-q", "-e", ".[test]"); err != nil {
+	if out, err := runCommand(10*time.Minute, workspace, python, "-m", "pip", "install", "-q", "-e", ".[test]"); err != nil {
 		return "", fmt.Errorf("install test dependencies: %w: %s", err, compactString(out))
+	}
+	if err := os.WriteFile(marker, []byte("ok\n"), 0o644); err != nil {
+		return "", fmt.Errorf("write test venv marker: %w", err)
 	}
 	return python, nil
 }
