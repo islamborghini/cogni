@@ -1,8 +1,6 @@
 # Cogni v0.1 benchmark task set.
 #
 # Methodology: ../../BENCHMARK.md
-# Target SHA is pinned before week-4 measurement; placeholder until then.
-#
 # Tasks must be drawn from real merged PRs / historical issues so success is
 # checkable against ground truth. Synthetic tasks are not allowed.
 
@@ -26,4 +24,64 @@ tasks:
       - output_contains: "AsyncHTTPTransport"
       - output_contains: "BaseTransport"
 
-  
+  # ---- bug-fix family ---------------------------------------------------
+  - id: fix-empty-zstd-response
+    family: bug-fix
+    source_pr: https://github.com/encode/httpx/pull/3412
+    prompt: |
+      Reproduce and fix the zstd decoder bug where an HTTP response with
+      `Content-Encoding: zstd` and an empty body raises a decoding error
+      instead of returning empty bytes.
+
+      Add a focused regression test for the empty zstd response case, then
+      update the decoder implementation so the test passes without weakening
+      the existing truncated zstd error behavior.
+    description: |
+      Based on httpx PR #3412. The fix requires locating the zstd decoder,
+      understanding how decode/flush interact, and adding a narrow regression
+      test in the existing decoder tests.
+    success_criteria:
+      - file_modified: "httpx/_decoders.py"
+      - file_modified: "tests/test_decoders.py"
+      - tests_pass: "tests/test_decoders.py::test_zstd_empty"
+
+  # ---- add-feature family ----------------------------------------------
+  - id: lazy-load-httpcore-exceptions
+    family: add-feature
+    source_pr: https://github.com/encode/httpx/pull/3377
+    prompt: |
+      Implement lazy loading for httpcore exception classes in
+      `httpx/_transports/default.py`.
+
+      Today the default transport imports httpcore at module import time just
+      to build the exception mapping. Add a helper that loads the httpcore
+      exception mapping only when `map_httpcore_exceptions()` is actually
+      used, and update the mapping logic to call that helper on first use.
+      Keep the public transport behavior unchanged.
+    description: |
+      Based on the httpcore portion of httpx PR #3377. The task exercises
+      definition lookup, understanding a context manager, and adding a small
+      helper function in the right module.
+    success_criteria:
+      - file_modified: "httpx/_transports/default.py"
+      - function_added: "httpx._transports.default._load_httpcore_exceptions"
+
+  # ---- refactor family --------------------------------------------------
+  - id: move-header-normalizers
+    family: refactor
+    source_pr: https://github.com/encode/httpx/pull/3382
+    prompt: |
+      Refactor header normalization so the header key/value helper functions
+      live next to the `Headers` implementation in `httpx/_models.py` instead
+      of in `httpx/_utils.py`.
+
+      Move the helper logic used by `Headers.__init__`, keep behavior the same
+      for string and bytes header keys/values, and remove the now-unused
+      imports/definitions from `_utils.py`.
+    description: |
+      Based on httpx PR #3382. This is a small cross-file refactor where the
+      agent must find the helper definitions and their call sites before
+      moving them.
+    success_criteria:
+      - file_modified: "httpx/_models.py"
+      - file_modified: "httpx/_utils.py"
