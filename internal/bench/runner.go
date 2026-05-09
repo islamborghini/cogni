@@ -28,6 +28,10 @@ type RunResult struct {
 	// criteria that need to inspect the shape of edits, not just file paths.
 	Diff string
 
+	// WorkspacePath is the checkout path where the run executed. It lets
+	// post-run criteria execute repository-local checks such as pytest.
+	WorkspacePath string
+
 	// InputTokens / OutputTokens are summed across every API call in the
 	// run, taken from API response metadata (not estimated).
 	InputTokens  int

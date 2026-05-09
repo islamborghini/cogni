@@ -44,7 +44,12 @@ type ClaudeRunner struct {
 // Run executes the task, returning a RunResult. The workspace's modified file
 // list and diff are captured after the agent exits.
 func (r *ClaudeRunner) Run(ctx context.Context, task Task, cond Condition, runIndex int) RunResult {
-	res := RunResult{TaskID: task.ID, Condition: cond, RunIndex: runIndex}
+	res := RunResult{
+		TaskID:        task.ID,
+		Condition:     cond,
+		RunIndex:      runIndex,
+		WorkspacePath: r.Workspace.Path,
+	}
 
 	cmdName := r.Cfg.ClaudeCmd
 	if cmdName == "" {
