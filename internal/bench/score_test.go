@@ -114,7 +114,7 @@ func TestScoreRunFunctionAddedMissing(t *testing.T) {
 	}
 }
 
-func TestScoreRunSkipsUnimplementedCriteria(t *testing.T) {
+func TestScoreRunTestsPass(t *testing.T) {
 	task := Task{
 		ID:     "t1",
 		Family: FamilyBugFix,
@@ -123,19 +123,61 @@ func TestScoreRunSkipsUnimplementedCriteria(t *testing.T) {
 			{TestsPass: "tests/foo"},
 		},
 	}
-	s := ScoreRun(task, RunResult{})
-	// All criteria skipped → no checks → Pass should be false (nothing
-	// was actually verified).
+	orig := runTestsPass
+	t.Cleanup(func() { runTestsPass = orig })
+	var gotWorkspace, gotNode string
+	runTestsPass = func(workspace, node string) (string, error) {
+		gotWorkspace, gotNode = workspace, node
+		return "ok", nil
+	}
+
+	s := ScoreRun(task, RunResult{WorkspacePath: "/tmp/repo"})
+	if !s.Pass {
+		t.Fatalf("want pass, got %+v", s.Criteria)
+	}
+	if gotWorkspace != "/tmp/repo" || gotNode != "tests/foo" {
+		t.Fatalf("runner got workspace=%q node=%q", gotWorkspace, gotNode)
+	}
+}
+
+func TestScoreRunTestsPassFailure(t *testing.T) {
+	task := Task{
+		ID:              "t1",
+		Family:          FamilyBugFix,
+		Prompt:          "p",
+		SuccessCriteria: []Criterion{{TestsPass: "tests/foo"}},
+	}
+	orig := runTestsPass
+	t.Cleanup(func() { runTestsPass = orig })
+	runTestsPass = func(workspace, node string) (string, error) {
+		return "assertion failed", errors.New("exit status 1")
+	}
+
+	s := ScoreRun(task, RunResult{WorkspacePath: "/tmp/repo"})
 	if s.Pass {
-		t.Errorf("all-skipped run should not pass")
+		t.Fatal("want fail")
 	}
-	if s.NumChecked != 0 {
-		t.Errorf("checked=%d, want 0", s.NumChecked)
+	if s.NumChecked != 1 || s.NumPassed != 0 {
+		t.Errorf("counts: checked=%d passed=%d", s.NumChecked, s.NumPassed)
 	}
-	for _, cr := range s.Criteria {
-		if cr.Status != StatusSkipped {
-			t.Errorf("criterion %+v should be skipped, got %s", cr.Criterion, cr.Status)
-		}
+	if !strings.Contains(s.Criteria[0].Detail, "assertion failed") {
+		t.Fatalf("detail did not include pytest output: %q", s.Criteria[0].Detail)
+	}
+}
+
+func TestScoreRunTestsPassRequiresWorkspace(t *testing.T) {
+	task := Task{
+		ID:              "t1",
+		Family:          FamilyBugFix,
+		Prompt:          "p",
+		SuccessCriteria: []Criterion{{TestsPass: "tests/foo"}},
+	}
+	s := ScoreRun(task, RunResult{})
+	if s.Pass {
+		t.Fatal("want fail")
+	}
+	if s.NumChecked != 1 {
+		t.Errorf("checked=%d, want 1", s.NumChecked)
 	}
 }
 
@@ -146,14 +188,17 @@ func TestScoreRunMixedPassAndSkip(t *testing.T) {
 		Prompt: "p",
 		SuccessCriteria: []Criterion{
 			{OutputContains: "ok"},
-			{TestsPass: "tests/foo"},
+			{FunctionAdded: "httpx.added"},
 		},
 	}
-	s := ScoreRun(task, RunResult{Output: "all ok"})
+	s := ScoreRun(task, RunResult{
+		Output: "all ok",
+		Diff:   "+def added():\n+    return True\n",
+	})
 	if !s.Pass {
-		t.Errorf("expected pass: one passed, one skipped")
+		t.Errorf("expected pass: output and function_added passed")
 	}
-	if s.NumChecked != 1 || s.NumPassed != 1 {
+	if s.NumChecked != 2 || s.NumPassed != 2 {
 		t.Errorf("counts: checked=%d passed=%d", s.NumChecked, s.NumPassed)
 	}
 }

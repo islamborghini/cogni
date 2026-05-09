@@ -1,8 +1,16 @@
 package bench
 
 import (
+	"bytes"
+	"context"
+	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
+	"time"
 )
 
 // CriterionStatus is the outcome of checking a single criterion.
@@ -85,11 +93,7 @@ func checkCriterion(c Criterion, run RunResult) CriterionResult {
 			Detail:    "file " + quote(c.FileModified) + " was not modified",
 		}
 	case c.TestsPass != "":
-		return CriterionResult{
-			Criterion: c,
-			Status:    StatusSkipped,
-			Detail:    "tests_pass not yet implemented",
-		}
+		return checkTestsPass(c, run)
 	case c.FunctionAdded != "":
 		return checkFunctionAdded(c, run)
 	}
@@ -98,6 +102,34 @@ func checkCriterion(c Criterion, run RunResult) CriterionResult {
 		Status:    StatusFail,
 		Detail:    "empty criterion",
 	}
+}
+
+var runTestsPass = runPytestCriterion
+
+func checkTestsPass(c Criterion, run RunResult) CriterionResult {
+	if strings.TrimSpace(c.TestsPass) == "" {
+		return CriterionResult{
+			Criterion: c,
+			Status:    StatusFail,
+			Detail:    "tests_pass target is empty",
+		}
+	}
+	if run.WorkspacePath == "" {
+		return CriterionResult{
+			Criterion: c,
+			Status:    StatusFail,
+			Detail:    "workspace path unavailable for tests_pass",
+		}
+	}
+	out, err := runTestsPass(run.WorkspacePath, c.TestsPass)
+	if err != nil {
+		return CriterionResult{
+			Criterion: c,
+			Status:    StatusFail,
+			Detail:    "pytest failed: " + compactOutput(out, err),
+		}
+	}
+	return CriterionResult{Criterion: c, Status: StatusPass}
 }
 
 func checkFunctionAdded(c Criterion, run RunResult) CriterionResult {
@@ -140,6 +172,73 @@ func diffAddsFunction(diff, name string) bool {
 		}
 	}
 	return false
+}
+
+func runPytestCriterion(workspace, node string) (string, error) {
+	python, err := ensureTestVenv(workspace)
+	if err != nil {
+		return "", err
+	}
+	return runBenchCommand(10*time.Minute, workspace, python, "-m", "pytest", node, "-x", "--tb=no", "-q")
+}
+
+func ensureTestVenv(workspace string) (string, error) {
+	python := venvPython(filepath.Join(workspace, ".cogni-test-venv"))
+	if _, err := os.Stat(python); err == nil {
+		return python, nil
+	} else if !os.IsNotExist(err) {
+		return "", err
+	}
+	if out, err := runBenchCommand(5*time.Minute, workspace, "python3", "-m", "venv", ".cogni-test-venv"); err != nil {
+		return "", fmt.Errorf("create test venv: %w: %s", err, compactString(out))
+	}
+	if out, err := runBenchCommand(10*time.Minute, workspace, python, "-m", "pip", "install", "-q", "-e", ".[test]"); err != nil {
+		return "", fmt.Errorf("install test dependencies: %w: %s", err, compactString(out))
+	}
+	return python, nil
+}
+
+func venvPython(venv string) string {
+	if runtime.GOOS == "windows" {
+		return filepath.Join(venv, "Scripts", "python.exe")
+	}
+	return filepath.Join(venv, "bin", "python")
+}
+
+func runBenchCommand(timeout time.Duration, dir, name string, args ...string) (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, name, args...)
+	cmd.Dir = dir
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = &out
+	err := cmd.Run()
+	if ctx.Err() == context.DeadlineExceeded {
+		return out.String(), ctx.Err()
+	}
+	return out.String(), err
+}
+
+func compactOutput(out string, err error) string {
+	msg := compactString(out)
+	if msg == "" {
+		return err.Error()
+	}
+	return err.Error() + ": " + msg
+}
+
+func compactString(s string) string {
+	fields := strings.Fields(s)
+	if len(fields) == 0 {
+		return ""
+	}
+	msg := strings.Join(fields, " ")
+	if len(msg) > 300 {
+		return msg[:300] + "..."
+	}
+	return msg
 }
 
 func quote(s string) string {
