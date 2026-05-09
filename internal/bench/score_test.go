@@ -61,6 +61,59 @@ func TestScoreRunFileModified(t *testing.T) {
 	}
 }
 
+func TestScoreRunFunctionAdded(t *testing.T) {
+	task := Task{
+		ID:     "t1",
+		Family: FamilyAddFeature,
+		Prompt: "p",
+		SuccessCriteria: []Criterion{
+			{FunctionAdded: "httpx._utils.normalize_header_key"},
+		},
+	}
+	diff := `diff --git a/httpx/_utils.py b/httpx/_utils.py
+index 123..456 100644
+--- a/httpx/_utils.py
++++ b/httpx/_utils.py
+@@ -1,0 +2,2 @@
++def normalize_header_key(value):
++    return value.lower()
+`
+	s := ScoreRun(task, RunResult{Diff: diff})
+	if !s.Pass {
+		t.Fatalf("want pass, got %+v", s.Criteria)
+	}
+}
+
+func TestScoreRunFunctionAddedAsync(t *testing.T) {
+	task := Task{
+		ID:              "t1",
+		Family:          FamilyAddFeature,
+		Prompt:          "p",
+		SuccessCriteria: []Criterion{{FunctionAdded: "httpx.fetch"}},
+	}
+	diff := "+async def fetch(url):\n+    return url\n"
+	s := ScoreRun(task, RunResult{Diff: diff})
+	if !s.Pass {
+		t.Fatalf("want pass for async def, got %+v", s.Criteria)
+	}
+}
+
+func TestScoreRunFunctionAddedMissing(t *testing.T) {
+	task := Task{
+		ID:              "t1",
+		Family:          FamilyAddFeature,
+		Prompt:          "p",
+		SuccessCriteria: []Criterion{{FunctionAdded: "httpx.target"}},
+	}
+	s := ScoreRun(task, RunResult{Diff: "+def other():\n+    pass\n"})
+	if s.Pass {
+		t.Fatal("want fail")
+	}
+	if len(s.Criteria) != 1 || s.Criteria[0].Status != StatusFail {
+		t.Fatalf("expected one fail, got %+v", s.Criteria)
+	}
+}
+
 func TestScoreRunSkipsUnimplementedCriteria(t *testing.T) {
 	task := Task{
 		ID:     "t1",
@@ -68,7 +121,6 @@ func TestScoreRunSkipsUnimplementedCriteria(t *testing.T) {
 		Prompt: "p",
 		SuccessCriteria: []Criterion{
 			{TestsPass: "tests/foo"},
-			{FunctionAdded: "httpx.bar"},
 		},
 	}
 	s := ScoreRun(task, RunResult{})

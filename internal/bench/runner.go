@@ -24,6 +24,10 @@ type RunResult struct {
 	// run. Empty for read-only tasks.
 	FilesModified []string
 
+	// Diff is the unified git diff from HEAD after the run. It is used by
+	// criteria that need to inspect the shape of edits, not just file paths.
+	Diff string
+
 	// InputTokens / OutputTokens are summed across every API call in the
 	// run, taken from API response metadata (not estimated).
 	InputTokens  int

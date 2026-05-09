@@ -66,6 +66,15 @@ func (w *Workspace) ModifiedFiles() ([]string, error) {
 	return files, nil
 }
 
+// Diff returns the unified diff of tracked changes relative to HEAD.
+func (w *Workspace) Diff() (string, error) {
+	out, err := captureGit(w.Path, "diff", "HEAD", "--")
+	if err != nil {
+		return "", fmt.Errorf("workspace: diff: %w", err)
+	}
+	return out, nil
+}
+
 // Cleanup removes the workspace directory.
 func (w *Workspace) Cleanup() error {
 	if w.Path == "" {
