@@ -2,8 +2,11 @@ package bench
 
 import (
 	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestScoreRunOutputContains(t *testing.T) {
@@ -178,6 +181,40 @@ func TestScoreRunTestsPassRequiresWorkspace(t *testing.T) {
 	}
 	if s.NumChecked != 1 {
 		t.Errorf("checked=%d, want 1", s.NumChecked)
+	}
+}
+
+func TestEnsureTestVenvInstallsWhenMarkerMissing(t *testing.T) {
+	workspace := t.TempDir()
+	venv := filepath.Join(workspace, ".cogni-test-venv")
+	python := venvPython(venv)
+	if err := os.MkdirAll(filepath.Dir(python), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(python, []byte("#!/bin/sh\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	orig := runCommand
+	t.Cleanup(func() { runCommand = orig })
+	var calls []string
+	runCommand = func(timeout time.Duration, dir, name string, args ...string) (string, error) {
+		calls = append(calls, name+" "+strings.Join(args, " "))
+		return "", nil
+	}
+
+	got, err := ensureTestVenv(workspace)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != python {
+		t.Fatalf("python=%q, want %q", got, python)
+	}
+	if len(calls) != 1 || !strings.Contains(calls[0], "pip install") {
+		t.Fatalf("calls=%v, want one pip install call", calls)
+	}
+	if _, err := os.Stat(filepath.Join(venv, ".cogni-deps-installed")); err != nil {
+		t.Fatalf("marker missing: %v", err)
 	}
 }
 
