@@ -41,8 +41,8 @@ type ClaudeRunner struct {
 	Workspace *Workspace
 }
 
-// Run executes the task, returning a RunResult. The workspace's
-// ModifiedFiles is captured after the agent exits.
+// Run executes the task, returning a RunResult. The workspace's modified file
+// list and diff are captured after the agent exits.
 func (r *ClaudeRunner) Run(ctx context.Context, task Task, cond Condition, runIndex int) RunResult {
 	res := RunResult{TaskID: task.ID, Condition: cond, RunIndex: runIndex}
 
@@ -117,6 +117,9 @@ func (r *ClaudeRunner) Run(ctx context.Context, task Task, cond Condition, runIn
 
 	if mods, err := r.Workspace.ModifiedFiles(); err == nil {
 		res.FilesModified = mods
+	}
+	if diff, err := r.Workspace.Diff(); err == nil {
+		res.Diff = diff
 	}
 	return res
 }

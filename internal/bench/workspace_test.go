@@ -104,6 +104,27 @@ func TestModifiedFilesDetectsEdits(t *testing.T) {
 	}
 }
 
+func TestDiffCapturesTrackedEdits(t *testing.T) {
+	src, sha := fixtureRepo(t)
+	ws, err := Prepare("file://"+src, sha, t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = ws.Cleanup() }()
+
+	if err := os.WriteFile(filepath.Join(ws.Path, "a.txt"), []byte("edited\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	diff, err := ws.Diff()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(diff, "+edited") {
+		t.Fatalf("diff did not include edit:\n%s", diff)
+	}
+}
+
 func TestPrepareRejectsUnpinnedSHA(t *testing.T) {
 	cases := []string{"", "TBD-PINNED-BEFORE-MEASUREMENT"}
 	for _, sha := range cases {

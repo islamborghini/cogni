@@ -1,6 +1,9 @@
 package bench
 
-import "strings"
+import (
+	"regexp"
+	"strings"
+)
 
 // CriterionStatus is the outcome of checking a single criterion.
 type CriterionStatus string
@@ -88,17 +91,55 @@ func checkCriterion(c Criterion, run RunResult) CriterionResult {
 			Detail:    "tests_pass not yet implemented",
 		}
 	case c.FunctionAdded != "":
-		return CriterionResult{
-			Criterion: c,
-			Status:    StatusSkipped,
-			Detail:    "function_added not yet implemented",
-		}
+		return checkFunctionAdded(c, run)
 	}
 	return CriterionResult{
 		Criterion: c,
 		Status:    StatusFail,
 		Detail:    "empty criterion",
 	}
+}
+
+func checkFunctionAdded(c Criterion, run RunResult) CriterionResult {
+	name := functionName(c.FunctionAdded)
+	if name == "" {
+		return CriterionResult{
+			Criterion: c,
+			Status:    StatusFail,
+			Detail:    "function_added target is empty",
+		}
+	}
+	if diffAddsFunction(run.Diff, name) {
+		return CriterionResult{Criterion: c, Status: StatusPass}
+	}
+	return CriterionResult{
+		Criterion: c,
+		Status:    StatusFail,
+		Detail:    "diff did not add function " + quote(name),
+	}
+}
+
+func functionName(qualified string) string {
+	qualified = strings.TrimSpace(qualified)
+	if qualified == "" {
+		return ""
+	}
+	parts := strings.Split(qualified, ".")
+	return parts[len(parts)-1]
+}
+
+func diffAddsFunction(diff, name string) bool {
+	pattern := `^\+\s*(?:async\s+)?def\s+` + regexp.QuoteMeta(name) + `\s*\(`
+	re := regexp.MustCompile(pattern)
+	for _, line := range strings.Split(diff, "\n") {
+		if strings.HasPrefix(line, "+++") {
+			continue
+		}
+		if re.MatchString(line) {
+			return true
+		}
+	}
+	return false
 }
 
 func quote(s string) string {
