@@ -7,8 +7,11 @@ architecture.png
 
 # Local bench config (machine-specific paths)
 /bench-mcp.json
-/bench-report.md
-/bench-runs/
+/bench-report*.md
+/bench-runs*/
+
+# Scratch notes
+kimi.md
 
 # Goreleaser output
 /dist/
@@ -25,3 +28,4 @@ coverage.txt
 *.swp
 .claude/
 /codex-context.md
+landing/tsconfig.tsbuildinfo
