@@ -63,9 +63,26 @@ cogni serve --root /absolute/path/to/your/python/repo
 
 ## Using with Claude Code
 
-Claude Code can connect to Cogni through MCP, but the MCP registration alone is not enough to reliably change tool selection. Add a `CLAUDE.md` file in your repo root so Claude Code prefers Cogni's scoped tools over broad Read/Grep/Glob exploration.
+Run `cogni install` once in the repository you want Claude Code to use Cogni in:
 
-**1. Register Cogni in your Claude Code MCP config** (`~/.claude.json` or per-project `.mcp.json`):
+```sh
+cd path/to/your/repo
+cogni install
+```
+
+This does three things automatically:
+
+1. Registers the Cogni MCP server in `~/.claude.json` (use `--local` to write `.mcp.json` instead).
+2. Writes a `CLAUDE.md` into the repo root telling Claude Code to prefer Cogni's tools over Read/Grep/Glob. This file is what actually changes agent behavior.
+3. Indexes the repository.
+
+Then restart Claude Code. Safe to re-run if anything changes.
+
+### Manual setup
+
+If you prefer to configure things by hand:
+
+**MCP config** (`~/.claude.json` or per-project `.mcp.json`):
 
 ```json
 {
@@ -78,7 +95,7 @@ Claude Code can connect to Cogni through MCP, but the MCP registration alone is 
 }
 ```
 
-**2. Drop a `CLAUDE.md` at the repository root** so Claude Code knows when to call Cogni's tools:
+**`CLAUDE.md`** in the repo root:
 
 ```markdown
 # Repository tooling
@@ -93,8 +110,6 @@ This repository has the **cogni** MCP server registered with these tools:
 
 For code exploration tasks, **prefer the cogni tools** over Glob / Grep / Read. They return structured, scoped results and use 5-10x fewer tokens for the same answer.
 ```
-
-**3. Restart Claude Code** and work in that repository as usual.
 
 ## Tools
 
@@ -113,6 +128,7 @@ The index is local-only. Per-repo SQLite databases live under `~/.cogni/<repo-ha
 ## Commands
 
 ```sh
+cogni install [--root PATH] [--local]      # configure Claude Code + index (run once per repo)
 cogni serve [--root PATH] [--db PATH]      # MCP server over stdio
 cogni index [PATH] [--stats] [--db PATH]   # build or refresh the index
 cogni bench [--runs N] [--mcp-config PATH] # run the token-savings benchmark
