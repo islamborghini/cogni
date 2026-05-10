@@ -22,7 +22,7 @@ function Nav() {
           </div>
           <span className="font-semibold tracking-tight">cogni</span>
           <span className="ml-3 hidden rounded-full border border-white/10 px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider text-zinc-400 sm:inline">
-            v0.1
+            v0.1.1
           </span>
         </div>
         <nav className="hidden items-center gap-6 text-sm text-zinc-400 md:flex">
@@ -370,6 +370,27 @@ function cnLocal(...c: Array<string | false | undefined>) {
   return c.filter(Boolean).join(" ");
 }
 
+const installSteps: Array<{ k: string; h: string; cmd: string; note?: string }> = [
+  {
+    k: "01",
+    h: "Install the binary",
+    cmd: "brew install islamborghini/tap/cogni",
+    note: "macOS and Linux. Static binary, no runtime.",
+  },
+  {
+    k: "02",
+    h: "Run install in your repo",
+    cmd: "cd path/to/your/python/repo && cogni install",
+    note: "Registers the MCP server, writes CLAUDE.md, indexes the repo. Idempotent.",
+  },
+  {
+    k: "03",
+    h: "Restart Claude Code",
+    cmd: "# Open Claude Code in the repo. Done.",
+    note: "Ask: \"use repo_overview to explain this codebase\" to verify.",
+  },
+];
+
 function DownloadSection() {
   return (
     <section
@@ -377,31 +398,55 @@ function DownloadSection() {
       className="relative overflow-hidden border-t border-white/10"
     >
       <div className="bg-grid absolute inset-0 opacity-40" />
-      <div className="relative mx-auto max-w-4xl px-6 py-24 text-center">
-        <h2 className="text-3xl font-semibold tracking-tight md:text-5xl">
-          Install in one line.
-        </h2>
-        <p className="mx-auto mt-4 max-w-xl text-zinc-400">
-          A single static binary. Point your agent at it and run.
-        </p>
-        <div className="mx-auto mt-8 flex max-w-xl items-center justify-between rounded-lg border border-white/10 bg-[#050505] px-4 py-3 font-mono text-sm">
-          <span className="text-zinc-300">
-            <span className="text-zinc-500">$ </span>
-            brew install islamborghini/tap/cogni
-          </span>
-          <span className="text-xs text-zinc-500">macOS · Linux</span>
+      <div className="relative mx-auto max-w-4xl px-6 py-24">
+        <div className="text-center">
+          <p className="font-mono text-xs uppercase tracking-widest text-zinc-500">
+            Quickstart
+          </p>
+          <h2 className="mt-3 text-3xl font-semibold tracking-tight md:text-5xl">
+            Three commands. Then your agent is faster.
+          </h2>
+          <p className="mx-auto mt-4 max-w-xl text-zinc-400">
+            Cogni is a single static binary that registers itself with Claude Code in one step. Nothing leaves your machine.
+          </p>
         </div>
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-          <a href="#" onClick={(e) => e.preventDefault()}>
+
+        <ol className="mt-10 space-y-3">
+          {installSteps.map((s) => (
+            <li
+              key={s.k}
+              className="rounded-xl border border-white/10 bg-[#050505] p-5"
+            >
+              <div className="flex items-baseline gap-3">
+                <span className="font-mono text-xs text-green-700 tracking-wider">
+                  {s.k}
+                </span>
+                <h3 className="text-base font-semibold text-white">{s.h}</h3>
+              </div>
+              <pre className="mt-3 overflow-x-auto rounded-md border border-white/5 bg-black px-4 py-3 font-mono text-sm text-zinc-200">
+                <code>
+                  <span className="text-zinc-600">$ </span>
+                  {s.cmd}
+                </code>
+              </pre>
+              {s.note && (
+                <p className="mt-3 text-sm text-zinc-500">{s.note}</p>
+              )}
+            </li>
+          ))}
+        </ol>
+
+        <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
+          <a href="https://github.com/islamborghini/cogni/releases/latest">
             <Button size="lg">
               <Download className="h-4 w-4" />
-              Download for macOS
+              Latest release
             </Button>
           </a>
-          <a href="#" onClick={(e) => e.preventDefault()}>
+          <a href="https://github.com/islamborghini/cogni#readme">
             <Button variant="outline" size="lg">
-              <Download className="h-4 w-4" />
-              Download for Linux
+              Docs
+              <ArrowRight className="h-4 w-4" />
             </Button>
           </a>
           <a
@@ -414,6 +459,17 @@ function DownloadSection() {
             </Button>
           </a>
         </div>
+
+        <p className="mt-6 text-center text-xs text-zinc-600">
+          Need manual setup? See the{" "}
+          <a
+            href="https://github.com/islamborghini/cogni#manual-configuration"
+            className="underline hover:text-zinc-400"
+          >
+            manual configuration guide
+          </a>
+          .
+        </p>
       </div>
     </section>
   );
