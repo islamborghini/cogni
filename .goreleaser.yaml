@@ -66,4 +66,3 @@ release:
   github:
     owner: islamborghini
     name: cogni
-  draft: true
