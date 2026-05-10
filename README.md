@@ -8,6 +8,20 @@ Open-core MCP (Model Context Protocol) server that drops into AI coding agents (
 
 AI coding agents waste a large share of their token budget orienting in unfamiliar repos: re-reading files, grepping for symbols, and accumulating stale context. Cogni indexes a Python repository into a local SQLite code graph and exposes scoped MCP tools so agents move from overview to file to symbol to source instead of brute-forcing context.
 
+## Quickstart
+
+```sh
+brew tap islamborghini/tap
+brew install islamborghini/tap/cogni
+
+cd path/to/your/python/repo
+cogni install
+```
+
+Restart Claude Code. That's it.
+
+`cogni install` does three things: registers Cogni in your Claude Code MCP config, writes a `CLAUDE.md` so the agent prefers Cogni's scoped tools over Read/Grep/Glob, and indexes the repository. Safe to re-run.
+
 ## Benchmark results
 
 Measured on the `httpx` codebase using Claude Code SDK with n=5 runs per condition:
@@ -18,15 +32,7 @@ Measured on the `httpx` codebase using Claude Code SDK with n=5 runs per conditi
 
 Methodology, fixed inputs, and reproduction steps are versioned in [BENCHMARK.md](BENCHMARK.md). Raw report: [bench-report.md](bench-report.md).
 
-## Install
-
-### Homebrew (macOS, Linux)
-
-```sh
-brew tap islamborghini/tap
-brew install islamborghini/tap/cogni
-cogni --version
-```
+## Other install methods
 
 ### Go
 
@@ -44,45 +50,11 @@ cd cogni
 go build -o cogni ./cmd/cogni
 ```
 
-## Quickstart
+## Manual configuration
 
-Index a Python repo:
+If you do not want to use `cogni install`, configure things by hand.
 
-```sh
-cd path/to/your/python/repo
-cogni index . --stats
-```
-
-Run the MCP server (auto-indexes on startup, watches for file changes):
-
-```sh
-cogni serve --root /absolute/path/to/your/python/repo
-```
-
-`cogni serve` speaks JSON-RPC over stdio.
-
-## Using with Claude Code
-
-Run `cogni install` once in the repository you want Claude Code to use Cogni in:
-
-```sh
-cd path/to/your/repo
-cogni install
-```
-
-This does three things automatically:
-
-1. Registers the Cogni MCP server in `~/.claude.json` (use `--local` to write `.mcp.json` instead).
-2. Writes a `CLAUDE.md` into the repo root telling Claude Code to prefer Cogni's tools over Read/Grep/Glob. This file is what actually changes agent behavior.
-3. Indexes the repository.
-
-Then restart Claude Code. Safe to re-run if anything changes.
-
-### Manual setup
-
-If you prefer to configure things by hand:
-
-**MCP config** (`~/.claude.json` or per-project `.mcp.json`):
+**1. Register Cogni in your Claude Code MCP config** (`~/.claude.json` or per-project `.mcp.json`):
 
 ```json
 {
@@ -95,7 +67,7 @@ If you prefer to configure things by hand:
 }
 ```
 
-**`CLAUDE.md`** in the repo root:
+**2. Drop a `CLAUDE.md` at the repository root** so Claude Code knows when to call Cogni's tools:
 
 ```markdown
 # Repository tooling
@@ -110,6 +82,22 @@ This repository has the **cogni** MCP server registered with these tools:
 
 For code exploration tasks, **prefer the cogni tools** over Glob / Grep / Read. They return structured, scoped results and use 5-10x fewer tokens for the same answer.
 ```
+
+**3. Index the repo and restart Claude Code:**
+
+```sh
+cogni index .
+```
+
+## Verifying it works
+
+Open Claude Code in a repo where you ran `cogni install` and ask something like:
+
+```
+use repo_overview to explain how this codebase is organized
+```
+
+The tool call panel should show `mcp__cogni__repo_overview` instead of a series of Read/Glob/Grep calls.
 
 ## Tools
 
@@ -144,7 +132,7 @@ cogni --version                            # print version
 Source layout:
 
 ```
-cmd/cogni/         CLI entrypoint (serve, index, bench)
+cmd/cogni/         CLI entrypoint (serve, index, install, bench)
 internal/parse/    tree-sitter Python parser
 internal/index/    indexer + filesystem watcher
 internal/store/    SQLite schema and queries
