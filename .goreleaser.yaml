@@ -26,11 +26,6 @@ builds:
         env:
           - CC=zig-cc-darwin-amd64
           - CXX=zig-cxx-darwin-amd64
-      - goos: darwin
-        goarch: arm64
-        env:
-          - CC=zig-cc-darwin-arm64
-          - CXX=zig-cxx-darwin-arm64
       - goos: linux
         goarch: amd64
         env:
