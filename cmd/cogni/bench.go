@@ -27,11 +27,11 @@ const defaultClaudeMD = `# Repository tooling
 
 This repository has the **cogni** MCP server registered with these tools:
 
-- ` + "`mcp__cogni__repo_overview`" + ` — high-level package map. Call FIRST for any architecture / "how does X work" question.
-- ` + "`mcp__cogni__file_outline`" + ` — list symbols in a file without returning source. Use INSTEAD OF Read when you only need to know what a file exposes.
-- ` + "`mcp__cogni__symbol_search`" + ` — find where a symbol is defined. Use INSTEAD OF Grep for definition lookups.
-- ` + "`mcp__cogni__symbol_source`" + ` — return one symbol's body. Use INSTEAD OF Read after symbol_search.
-- ` + "`mcp__cogni__find_references`" + ` — find usages of a symbol. Use INSTEAD OF Grep when answering "where is X used".
+- ` + "`mcp__cogni__repo_overview`" + `: high-level package map. Call FIRST for any architecture / "how does X work" question.
+- ` + "`mcp__cogni__file_outline`" + `: list symbols in a file without returning source. Use INSTEAD OF Read when you only need to know what a file exposes.
+- ` + "`mcp__cogni__symbol_search`" + `: find where a symbol is defined. Use INSTEAD OF Grep for definition lookups.
+- ` + "`mcp__cogni__symbol_source`" + `: return one symbol's body. Use INSTEAD OF Read after symbol_search.
+- ` + "`mcp__cogni__find_references`" + `: find usages of a symbol. Use INSTEAD OF Grep when answering "where is X used".
 
 For code exploration tasks, **prefer the cogni tools** over Glob / Grep / Read. They return structured, scoped results and use 5-10x fewer tokens for the same answer.
 `
