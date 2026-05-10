@@ -370,7 +370,7 @@ function cnLocal(...c: Array<string | false | undefined>) {
   return c.filter(Boolean).join(" ");
 }
 
-const installSteps: Array<{ k: string; h: string; cmd: string; note?: string }> = [
+const installSteps: Array<{ k: string; h: string; cmd?: string; note?: string }> = [
   {
     k: "01",
     h: "Install the binary",
@@ -386,8 +386,7 @@ const installSteps: Array<{ k: string; h: string; cmd: string; note?: string }> 
   {
     k: "03",
     h: "Restart Claude Code",
-    cmd: "# Open Claude Code in the repo. Done.",
-    note: "Ask: \"use repo_overview to explain this codebase\" to verify.",
+    note: "Open Claude Code in the repo. Ask: \"use repo_overview to explain this codebase\" to verify.",
   },
 ];
 
@@ -423,12 +422,14 @@ function DownloadSection() {
                 </span>
                 <h3 className="text-base font-semibold text-white">{s.h}</h3>
               </div>
-              <pre className="mt-3 overflow-x-auto rounded-md border border-white/5 bg-black px-4 py-3 font-mono text-sm text-zinc-200">
-                <code>
-                  <span className="text-zinc-600">$ </span>
-                  {s.cmd}
-                </code>
-              </pre>
+              {s.cmd && (
+                <pre className="mt-3 overflow-x-auto rounded-md border border-white/5 bg-black px-4 py-3 font-mono text-sm text-zinc-200">
+                  <code>
+                    <span className="text-zinc-600">$ </span>
+                    {s.cmd}
+                  </code>
+                </pre>
+              )}
               {s.note && (
                 <p className="mt-3 text-sm text-zinc-500">{s.note}</p>
               )}
