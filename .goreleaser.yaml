@@ -66,3 +66,4 @@ release:
   github:
     owner: islamborghini
     name: cogni
+  replace_existing_artifacts: true
