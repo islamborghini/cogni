@@ -10,9 +10,6 @@ builds:
   - id: cogni
     main: ./cmd/cogni
     binary: cogni
-    # tree-sitter requires CGO. Cross-compiling CGO across the four targets
-    # below needs a cross C toolchain in CI (zig cc or per-arch images);
-    # wire that up before the v0.1 release tag.
     env:
       - CGO_ENABLED=1
     goos:
@@ -23,6 +20,27 @@ builds:
       - arm64
     ldflags:
       - -s -w -X main.version={{.Version}}
+    overrides:
+      - goos: darwin
+        goarch: amd64
+        env:
+          - CC=./scripts/zig-cc-darwin-amd64
+          - CXX=./scripts/zig-cxx-darwin-amd64
+      - goos: darwin
+        goarch: arm64
+        env:
+          - CC=./scripts/zig-cc-darwin-arm64
+          - CXX=./scripts/zig-cxx-darwin-arm64
+      - goos: linux
+        goarch: amd64
+        env:
+          - CC=./scripts/zig-cc-linux-amd64
+          - CXX=./scripts/zig-cxx-linux-amd64
+      - goos: linux
+        goarch: arm64
+        env:
+          - CC=./scripts/zig-cc-linux-arm64
+          - CXX=./scripts/zig-cxx-linux-arm64
 
 archives:
   - id: cogni
@@ -34,6 +52,20 @@ archives:
 
 checksum:
   name_template: checksums.txt
+
+brews:
+  - name: cogni
+    repository:
+      owner: islamborghini
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    homepage: "https://getcogni.dev"
+    description: "MCP server for AI coding agents — structured repo recall with 40-60% token reduction"
+    license: "Apache-2.0"
+    install: |
+      bin.install "cogni"
+    test: |
+      system "#{bin}/cogni", "--version"
 
 release:
   github:
