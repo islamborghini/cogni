@@ -24,23 +24,23 @@ builds:
       - goos: darwin
         goarch: amd64
         env:
-          - CC=./scripts/zig-cc-darwin-amd64
-          - CXX=./scripts/zig-cxx-darwin-amd64
+          - CC=zig-cc-darwin-amd64
+          - CXX=zig-cxx-darwin-amd64
       - goos: darwin
         goarch: arm64
         env:
-          - CC=./scripts/zig-cc-darwin-arm64
-          - CXX=./scripts/zig-cxx-darwin-arm64
+          - CC=zig-cc-darwin-arm64
+          - CXX=zig-cxx-darwin-arm64
       - goos: linux
         goarch: amd64
         env:
-          - CC=./scripts/zig-cc-linux-amd64
-          - CXX=./scripts/zig-cxx-linux-amd64
+          - CC=zig-cc-linux-amd64
+          - CXX=zig-cxx-linux-amd64
       - goos: linux
         goarch: arm64
         env:
-          - CC=./scripts/zig-cc-linux-arm64
-          - CXX=./scripts/zig-cxx-linux-arm64
+          - CC=zig-cc-linux-arm64
+          - CXX=zig-cxx-linux-arm64
 
 archives:
   - id: cogni
