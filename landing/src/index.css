@@ -46,10 +46,11 @@ body {
 
 @keyframes marquee {
   from { transform: translateX(0); }
-  to   { transform: translateX(-50%); }
+  to   { transform: translateX(calc(-1 * var(--marquee-width, 50%))); }
 }
 .animate-marquee {
-  animation: marquee 30s linear infinite;
+  animation: marquee var(--marquee-duration, 30s) linear infinite;
+  will-change: transform;
 }
 .marquee-mask {
   -webkit-mask-image: linear-gradient(

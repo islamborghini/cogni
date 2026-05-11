@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CodeWindow } from "@/components/CodeWindow";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ArrowRight,
   Check,
@@ -128,6 +128,17 @@ function Hero() {
   );
 }
 
+function DevinMark(_props: { className?: string }) {
+  return (
+    <span
+      aria-label="Devin"
+      className="font-semibold tracking-tight text-zinc-400 opacity-70 hover:opacity-100 transition-opacity text-base"
+    >
+      Devin
+    </span>
+  );
+}
+
 function OpenAIMark({ className }: { className?: string }) {
   return (
     <svg
@@ -147,18 +158,74 @@ type Agent =
   | { name: string; component: (props: { className?: string }) => JSX.Element };
 
 const agents: Agent[] = [
-  { name: "Anthropic", slug: "anthropic" },
   { name: "Claude", slug: "claude" },
   { name: "OpenAI", component: OpenAIMark },
+  { name: "Gemini", slug: "googlegemini" },
   { name: "Cursor", slug: "cursor" },
   { name: "Windsurf", slug: "windsurf" },
+  { name: "Devin", component: DevinMark },
   { name: "Zed", slug: "zedindustries" },
   { name: "GitHub Copilot", slug: "githubcopilot" },
   { name: "Replit", slug: "replit" },
 ];
 
+const LogoRow = ({
+  hidden,
+  innerRef,
+}: {
+  hidden?: boolean;
+  innerRef?: React.Ref<HTMLDivElement>;
+}) => (
+  <div
+    ref={innerRef}
+    aria-hidden={hidden}
+    className="flex flex-shrink-0 items-center gap-10 pr-10"
+  >
+    {agents.map((a) => {
+      const iconCls =
+        "h-7 w-7 text-zinc-400 opacity-70 hover:opacity-100 transition-opacity";
+      const box = "flex h-7 w-20 items-center justify-center flex-shrink-0";
+      if ("component" in a) {
+        const Cmp = a.component;
+        return (
+          <div key={a.name} className={box}>
+            <Cmp className={iconCls} />
+          </div>
+        );
+      }
+      return (
+        <div key={a.name} className={box}>
+          <img
+            src={`https://cdn.simpleicons.org/${a.slug}/a1a1aa`}
+            alt={a.name}
+            title={a.name}
+            loading="eager"
+            decoding="sync"
+            className="h-7 w-7 opacity-70 hover:opacity-100 transition-opacity"
+          />
+        </div>
+      );
+    })}
+  </div>
+);
+
 function AgentsStrip() {
-  const row = [...agents, ...agents];
+  const rowRef = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(0);
+
+  useEffect(() => {
+    const el = rowRef.current;
+    if (!el) return;
+    const measure = () => setWidth(el.offsetWidth);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  // 35px/sec for a relaxed scroll pace.
+  const duration = width > 0 ? `${width / 35}s` : "45s";
+
   return (
     <section className="border-y border-white/10 bg-black">
       <div className="mx-auto max-w-6xl px-6 py-12">
@@ -166,29 +233,17 @@ function AgentsStrip() {
           Use it with your favourite agents
         </p>
         <div className="marquee-mask relative mt-8 overflow-hidden">
-          <div className="flex w-max animate-marquee items-center gap-16 whitespace-nowrap">
-            {row.map((a, i) => {
-              const key = `${a.name}-${i}`;
-              if ("component" in a) {
-                const Cmp = a.component;
-                return (
-                  <Cmp
-                    key={key}
-                    className="h-7 w-auto text-zinc-400 opacity-80 hover:opacity-100 transition-opacity"
-                  />
-                );
-              }
-              return (
-                <img
-                  key={key}
-                  src={`https://cdn.simpleicons.org/${a.slug}/a1a1aa`}
-                  alt={a.name}
-                  title={a.name}
-                  loading="lazy"
-                  className="h-7 w-auto opacity-80 hover:opacity-100 transition-opacity"
-                />
-              );
-            })}
+          <div
+            className="flex animate-marquee"
+            style={
+              {
+                "--marquee-width": width ? `${width}px` : "50%",
+                "--marquee-duration": duration,
+              } as React.CSSProperties
+            }
+          >
+            <LogoRow innerRef={rowRef} />
+            <LogoRow hidden />
           </div>
         </div>
       </div>
