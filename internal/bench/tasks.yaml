@@ -85,3 +85,121 @@ tasks:
     success_criteria:
       - file_modified: "httpx/_models.py"
       - file_modified: "httpx/_utils.py"
+
+  # ---- explain family (continued) ---------------------------------------
+  - id: explain-auth-flow
+    family: explain
+    prompt: |
+      In this httpx codebase, explain how authentication works. Specifically:
+      what is the Auth protocol and how does auth_flow work as a generator?
+      How does DigestAuth handle the WWW-Authenticate challenge-response
+      cycle? Which class field stores the last challenge, and how does the
+      client drive the auth_flow generator?
+    description: |
+      Tests orientation in httpx/_auth.py (~300 lines) without reading the
+      whole file. With Cogni, file_outline exposes DigestAuth and auth_flow
+      directly; without Cogni the agent typically reads the full file.
+    success_criteria:
+      - output_contains: "auth_flow"
+      - output_contains: "DigestAuth"
+      - output_contains: "_DigestAuthChallenge"
+
+  - id: explain-decoder-pipeline
+    family: explain
+    prompt: |
+      In this httpx codebase, explain how response content decoding works.
+      How does httpx select and chain decoders for Content-Encoding headers
+      (gzip, brotli, zstd)? What role does TextChunker play in iter_text?
+      Which Response method builds the decoder chain, and where does it live?
+    description: |
+      Tests orientation across _decoders.py and _models.py. With Cogni,
+      symbol_search for ContentDecoder and _get_content_decoder pinpoints
+      both files without reading either in full.
+    success_criteria:
+      - output_contains: "ContentDecoder"
+      - output_contains: "TextChunker"
+      - output_contains: "_get_content_decoder"
+
+  # ---- bug-fix family (continued) ----------------------------------------
+  - id: fix-url-param-percent-encoding
+    family: bug-fix
+    source_pr: https://github.com/encode/httpx/pull/3371
+    prompt: |
+      Fix URL percent-encoding in httpx to follow the WHATWG URL standard.
+      Add per-component safe-character sets (fragment, query, path, username,
+      password) as module-level constants derived from the WHATWG
+      percent-encode sets, then update urlparse() to use the appropriate
+      constant when quoting each URL component instead of the current blanket
+      quote() calls.
+
+      Add a regression test that confirms params={"u": "%"} produces u=%25
+      (the bare percent must be escaped, not passed through).
+    description: |
+      Based on httpx PR #3371. Agent must read _urlparse.py (~400 lines) to
+      understand existing quoting calls. With Cogni, symbol_search on
+      urlparse + symbol_source returns the exact change sites; without Cogni
+      the agent typically reads the full file.
+    success_criteria:
+      - file_modified: "httpx/_urlparse.py"
+      - tests_pass: "tests/models/test_url.py::test_param_requires_encoding"
+
+  # ---- add-feature family (continued) ------------------------------------
+  - id: lazy-load-certifi
+    family: add-feature
+    source_pr: https://github.com/encode/httpx/pull/3377
+    prompt: |
+      Make certifi a lazy import in httpx/_config.py. Currently certifi is
+      imported at module load time. Move the import inside the body of
+      SSLContext.__init__ so certifi is only loaded when an SSL context is
+      actually constructed.
+
+      Add a test that confirms certifi is absent from sys.modules immediately
+      after importing httpx, and present after constructing httpx.SSLContext().
+    description: |
+      Certifi portion of httpx PR #3377. Requires finding the module-level
+      import and the SSLContext constructor. With Cogni, symbol_source on
+      SSLContext returns the exact constructor body without reading _config.py.
+    success_criteria:
+      - file_modified: "httpx/_config.py"
+      - tests_pass: "tests/test_config.py::test_certifi_lazy_loading"
+
+  - id: encode-json-compact
+    family: add-feature
+    source_pr: https://github.com/encode/httpx/pull/3367
+    prompt: |
+      Update httpx's JSON request encoding to produce compact output.
+      In httpx/_content.py, the encode_json function currently calls
+      json.dumps with default settings. Change it to pass:
+        ensure_ascii=False  (preserve Unicode characters as-is)
+        separators=(",", ":")  (no spaces after delimiters)
+        allow_nan=False  (reject NaN and Inf rather than producing invalid JSON)
+
+      Add tests for each of the three new behaviours.
+    description: |
+      Based on httpx PR #3367. encode_json is a small function; agent should
+      reach it via symbol_source rather than reading the whole file.
+      Without Cogni the agent often reads all of _content.py to orient.
+    success_criteria:
+      - file_modified: "httpx/_content.py"
+      - tests_pass: "tests/test_content.py::test_separators_for_compact_json"
+
+  # ---- refactor family (continued) ----------------------------------------
+  - id: move-redirect-helpers-to-client
+    family: refactor
+    source_pr: https://github.com/encode/httpx/pull/3389
+    prompt: |
+      Move the redirect-checking utility functions same_origin,
+      is_https_redirect, and port_or_default from httpx/_utils.py into
+      httpx/_client.py as private functions (prefix names with a leading
+      underscore). Update every call site in _client.py to use the new
+      private names. Remove the now-unused public definitions from _utils.py.
+      Move the corresponding tests from tests/test_utils.py into
+      tests/client/test_headers.py.
+    description: |
+      Based on httpx PR #3389. Agent must use find_references to locate all
+      call sites before moving. With Cogni, find_references on same_origin
+      returns every usage in one call; without Cogni multiple greps are needed.
+    success_criteria:
+      - file_modified: "httpx/_client.py"
+      - file_modified: "httpx/_utils.py"
+      - function_added: "httpx._client._same_origin"
