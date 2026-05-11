@@ -199,8 +199,18 @@ func ensureTestVenv(workspace string) (string, error) {
 	} else if err != nil {
 		return "", err
 	}
-	if out, err := runCommand(10*time.Minute, workspace, python, "-m", "pip", "install", "-q", "-e", ".[test]"); err != nil {
-		return "", fmt.Errorf("install test dependencies: %w: %s", err, compactString(out))
+	// Some repos (e.g. httpx) declare test deps in requirements.txt rather
+	// than a [test] extra. Try requirements.txt first, fall back to .[test].
+	reqFile := filepath.Join(workspace, "requirements.txt")
+	var installOut string
+	var installErr error
+	if _, err := os.Stat(reqFile); err == nil {
+		installOut, installErr = runCommand(10*time.Minute, workspace, python, "-m", "pip", "install", "-q", "-r", "requirements.txt")
+	} else {
+		installOut, installErr = runCommand(10*time.Minute, workspace, python, "-m", "pip", "install", "-q", "-e", ".[test]")
+	}
+	if installErr != nil {
+		return "", fmt.Errorf("install test dependencies: %w: %s", installErr, compactString(installOut))
 	}
 	if err := os.WriteFile(marker, []byte("ok\n"), 0o644); err != nil {
 		return "", fmt.Errorf("write test venv marker: %w", err)

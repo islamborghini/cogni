@@ -66,7 +66,13 @@ func (r *ClaudeRunner) Run(ctx context.Context, task Task, cond Condition, runIn
 		args = append(args, "--model", r.Cfg.Model)
 	}
 	if cond == ConditionCogni && r.Cfg.MCPConfigPath != "" {
-		args = append(args, "--mcp-config", r.Cfg.MCPConfigPath)
+		mcpPath := r.Cfg.MCPConfigPath
+		if !filepath.IsAbs(mcpPath) {
+			if abs, err := filepath.Abs(mcpPath); err == nil {
+				mcpPath = abs
+			}
+		}
+		args = append(args, "--mcp-config", mcpPath)
 	}
 	if cond == ConditionCogni && r.Cfg.SystemPrompt != "" {
 		args = append(args, "--append-system-prompt", r.Cfg.SystemPrompt)
