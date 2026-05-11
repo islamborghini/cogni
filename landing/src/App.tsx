@@ -261,7 +261,9 @@ function Problem() {
               The problem
             </p>
             <h2 className="mt-3 text-3xl font-semibold tracking-tight md:text-4xl">
-              Coding agents forget. Then they pay to remember.
+              Coding agents forget.
+              <br />
+              Then they pay to remember.
             </h2>
             <p className="mt-5 text-zinc-400 leading-relaxed">
               Every prompt forces agents to rediscover structure they have

@@ -9,8 +9,7 @@
   --color-card: #050505;
   --color-accent: #18181b;
 
-  --font-sans: "DM Sans", ui-sans-serif, system-ui, -apple-system,
-    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-sans: "Helvetica Neue", Helvetica, Arial, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo,
     Monaco, Consolas, monospace;
 }
