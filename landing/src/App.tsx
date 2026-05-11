@@ -514,7 +514,9 @@ function DownloadSection() {
             Quickstart
           </p>
           <h2 className="mt-3 text-3xl font-semibold tracking-tight md:text-5xl">
-            Three commands. Then your agent is faster.
+            Three commands.
+              <br />
+              Then your agent is faster.
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-zinc-400">
             Cogni is a single static binary that registers itself with Claude Code in one step. Nothing leaves your machine.
