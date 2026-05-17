@@ -76,6 +76,29 @@ func TestAggregateOmitsTasksWithoutScores(t *testing.T) {
 	}
 }
 
+func TestAggregateCostWeightedReduction(t *testing.T) {
+	set := &TaskSet{Tasks: []Task{{ID: "t1"}}}
+	// Baseline: input=100, output=100, cache_create=0, cache_read=0
+	//   weighted = 100 + 5*100 = 600
+	// Cogni:    input=100, output=100, cache_create=200, cache_read=10000
+	//   weighted = 100 + 5*100 + 1.25*200 + 0.1*10000 = 1850
+	// Raw token reduction = 0 (both 200). Cost reduction = (600-1850)/600 ≈ -208.3%.
+	scores := []Score{
+		{Run: RunResult{TaskID: "t1", Condition: ConditionBaseline, InputTokens: 100, OutputTokens: 100}, Pass: true},
+		{Run: RunResult{TaskID: "t1", Condition: ConditionCogni, InputTokens: 100, OutputTokens: 100, CacheCreationTokens: 200, CacheReadTokens: 10000}, Pass: true},
+	}
+	got := Aggregate(set, scores)[0]
+	if got.TokenReductionPct != 0 {
+		t.Errorf("raw reduction = %f, want 0", got.TokenReductionPct)
+	}
+	if math.Abs(got.CostReductionPct-(-208.333333)) > 0.01 {
+		t.Errorf("cost reduction = %f, want ~-208.33", got.CostReductionPct)
+	}
+	if math.Abs(got.Cogni.MeanCacheRead-10000) > 0.01 {
+		t.Errorf("mean cache_read = %f, want 10000", got.Cogni.MeanCacheRead)
+	}
+}
+
 func TestAggregateSortsByTaskID(t *testing.T) {
 	set := &TaskSet{Tasks: []Task{{ID: "z"}, {ID: "a"}, {ID: "m"}}}
 	scores := []Score{

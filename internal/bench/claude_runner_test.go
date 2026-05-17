@@ -44,6 +44,37 @@ func TestParseStreamJSONFallbackSumsAssistantUsage(t *testing.T) {
 	}
 }
 
+func TestParseStreamJSONCapturesCacheTokens(t *testing.T) {
+	stream := strings.Join([]string{
+		`{"type":"system","subtype":"init"}`,
+		`{"type":"result","subtype":"success","result":"ok","usage":{"input_tokens":14,"output_tokens":2205,"cache_creation_input_tokens":23474,"cache_read_input_tokens":246266}}`,
+	}, "\n")
+	got, err := parseStreamJSON(strings.NewReader(stream))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.CacheCreationInputTokens != 23474 {
+		t.Errorf("cache_creation=%d, want 23474", got.CacheCreationInputTokens)
+	}
+	if got.CacheReadInputTokens != 246266 {
+		t.Errorf("cache_read=%d, want 246266", got.CacheReadInputTokens)
+	}
+}
+
+func TestParseStreamJSONFallbackSumsCacheTokens(t *testing.T) {
+	stream := strings.Join([]string{
+		`{"type":"assistant","message":{"usage":{"input_tokens":1,"output_tokens":1,"cache_creation_input_tokens":100,"cache_read_input_tokens":1000}}}`,
+		`{"type":"assistant","message":{"usage":{"input_tokens":1,"output_tokens":1,"cache_creation_input_tokens":50,"cache_read_input_tokens":2000}}}`,
+	}, "\n")
+	got, err := parseStreamJSON(strings.NewReader(stream))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.CacheCreationInputTokens != 150 || got.CacheReadInputTokens != 3000 {
+		t.Errorf("fallback cache=%d/%d, want 150/3000", got.CacheCreationInputTokens, got.CacheReadInputTokens)
+	}
+}
+
 func TestParseStreamJSONSkipsMalformedLines(t *testing.T) {
 	stream := strings.Join([]string{
 		`{"type":"system","subtype":"init"}`,

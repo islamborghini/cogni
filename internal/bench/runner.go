@@ -37,6 +37,13 @@ type RunResult struct {
 	InputTokens  int
 	OutputTokens int
 
+	// CacheCreationTokens / CacheReadTokens capture Anthropic prompt-cache
+	// activity. Cogni runs typically have much larger cached context (the
+	// MCP tool schemas + tool results), so a token total that ignores cache
+	// understates cogni's real billing footprint.
+	CacheCreationTokens int
+	CacheReadTokens     int
+
 	// DurationMS is wall-clock time for the run.
 	DurationMS int64
 

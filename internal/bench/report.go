@@ -29,26 +29,31 @@ func WriteReport(w io.Writer, meta ReportMeta, summaries []TaskSummary, scores .
 	fmt.Fprintf(w, "- **Generated:** %s\n", meta.GeneratedAt.UTC().Format(time.RFC3339))
 	fmt.Fprintln(w)
 
-	overall := overallReduction(summaries)
+	overallRaw, overallCost := overallReductions(summaries)
 	fmt.Fprintln(w, "## Headline")
 	fmt.Fprintln(w)
 	if len(summaries) == 0 {
 		fmt.Fprintln(w, "No tasks were scored.")
 	} else {
-		fmt.Fprintf(w, "Mean per-task token reduction: **%+.1f%%** across %d tasks.\n",
-			overall, len(summaries))
+		fmt.Fprintf(w, "Mean per-task token reduction (raw, input+output, no cache): **%+.1f%%** across %d tasks.\n",
+			overallRaw, len(summaries))
+		fmt.Fprintln(w)
+		fmt.Fprintf(w, "Mean per-task cost reduction (price-weighted, includes cache): **%+.1f%%**.\n",
+			overallCost)
 	}
 	fmt.Fprintln(w)
 
 	fmt.Fprintln(w, "## Per-task results")
 	fmt.Fprintln(w)
-	fmt.Fprintln(w, "| Task | Family | Baseline mean | Cogni mean | Reduction | Baseline pass | Cogni pass |")
-	fmt.Fprintln(w, "|---|---|---:|---:|---:|---:|---:|")
+	fmt.Fprintln(w, "| Task | Family | Baseline raw | Cogni raw | Raw red. | Baseline cost | Cogni cost | Cost red. | B pass | C pass |")
+	fmt.Fprintln(w, "|---|---|---:|---:|---:|---:|---:|---:|---:|---:|")
 	for _, s := range summaries {
-		fmt.Fprintf(w, "| %s | %s | %.0f | %.0f | %+.1f%% | %d/%d | %d/%d |\n",
+		fmt.Fprintf(w, "| %s | %s | %.0f | %.0f | %+.1f%% | %.0f | %.0f | %+.1f%% | %d/%d | %d/%d |\n",
 			s.TaskID, s.Family,
 			s.Baseline.MeanTotal, s.Cogni.MeanTotal,
 			s.TokenReductionPct,
+			s.Baseline.MeanWeighted, s.Cogni.MeanWeighted,
+			s.CostReductionPct,
 			s.Baseline.PassCount, s.Baseline.Runs,
 			s.Cogni.PassCount, s.Cogni.Runs,
 		)
@@ -123,13 +128,15 @@ func detailSuffix(detail string) string {
 	return " (" + detail + ")"
 }
 
-func overallReduction(s []TaskSummary) float64 {
+func overallReductions(s []TaskSummary) (raw, cost float64) {
 	if len(s) == 0 {
-		return 0
+		return 0, 0
 	}
-	sum := 0.0
+	var sumRaw, sumCost float64
 	for _, t := range s {
-		sum += t.TokenReductionPct
+		sumRaw += t.TokenReductionPct
+		sumCost += t.CostReductionPct
 	}
-	return sum / float64(len(s))
+	n := float64(len(s))
+	return sumRaw / n, sumCost / n
 }
