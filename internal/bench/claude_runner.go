@@ -125,6 +125,8 @@ func (r *ClaudeRunner) Run(ctx context.Context, task Task, cond Condition, runIn
 	res.Output = parsed.Result
 	res.InputTokens = parsed.InputTokens
 	res.OutputTokens = parsed.OutputTokens
+	res.CacheCreationTokens = parsed.CacheCreationInputTokens
+	res.CacheReadTokens = parsed.CacheReadInputTokens
 
 	if mods, err := r.Workspace.ModifiedFiles(); err == nil {
 		res.FilesModified = mods
@@ -145,8 +147,10 @@ type streamEvent struct {
 }
 
 type streamUsage struct {
-	InputTokens  int `json:"input_tokens"`
-	OutputTokens int `json:"output_tokens"`
+	InputTokens              int `json:"input_tokens"`
+	OutputTokens             int `json:"output_tokens"`
+	CacheCreationInputTokens int `json:"cache_creation_input_tokens"`
+	CacheReadInputTokens     int `json:"cache_read_input_tokens"`
 }
 
 type streamMessage struct {
@@ -156,9 +160,11 @@ type streamMessage struct {
 // parsedStream is what parseStreamJSON returns: the final result text plus
 // total tokens taken from the result event's usage block.
 type parsedStream struct {
-	Result       string
-	InputTokens  int
-	OutputTokens int
+	Result                   string
+	InputTokens              int
+	OutputTokens             int
+	CacheCreationInputTokens int
+	CacheReadInputTokens     int
 }
 
 // parseStreamJSON reads newline-delimited JSON events from r and returns
@@ -167,7 +173,7 @@ type parsedStream struct {
 // arrives (e.g. the SDK was killed mid-stream).
 func parseStreamJSON(r io.Reader) (parsedStream, error) {
 	var out parsedStream
-	var sumIn, sumOut int
+	var sumIn, sumOut, sumCacheCreate, sumCacheRead int
 	var sawResult bool
 
 	scanner := bufio.NewScanner(r)
@@ -189,11 +195,15 @@ func parseStreamJSON(r io.Reader) (parsedStream, error) {
 			if e.Usage != nil {
 				out.InputTokens = e.Usage.InputTokens
 				out.OutputTokens = e.Usage.OutputTokens
+				out.CacheCreationInputTokens = e.Usage.CacheCreationInputTokens
+				out.CacheReadInputTokens = e.Usage.CacheReadInputTokens
 			}
 		case "assistant":
 			if e.Message != nil && e.Message.Usage != nil {
 				sumIn += e.Message.Usage.InputTokens
 				sumOut += e.Message.Usage.OutputTokens
+				sumCacheCreate += e.Message.Usage.CacheCreationInputTokens
+				sumCacheRead += e.Message.Usage.CacheReadInputTokens
 			}
 		}
 	}
@@ -203,6 +213,8 @@ func parseStreamJSON(r io.Reader) (parsedStream, error) {
 	if !sawResult {
 		out.InputTokens = sumIn
 		out.OutputTokens = sumOut
+		out.CacheCreationInputTokens = sumCacheCreate
+		out.CacheReadInputTokens = sumCacheRead
 	}
 	return out, nil
 }
