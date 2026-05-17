@@ -46,10 +46,10 @@ type TaskSummary struct {
 }
 
 type cell struct {
-	input, output, total                  []int
-	cacheCreation, cacheRead              []int
-	weighted                              []float64
-	passed                                int
+	input, output, total     []int
+	cacheCreation, cacheRead []int
+	weighted                 []float64
+	passed                   int
 }
 
 type pair struct {
