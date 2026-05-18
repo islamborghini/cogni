@@ -7,11 +7,13 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -128,6 +130,11 @@ func (r *ClaudeRunner) Run(ctx context.Context, task Task, cond Condition, runIn
 	res.CacheCreationTokens = parsed.CacheCreationInputTokens
 	res.CacheReadTokens = parsed.CacheReadInputTokens
 
+	if strings.Contains(parsed.Result, rateLimitMarker) {
+		res.Err = ErrRateLimited
+		return res
+	}
+
 	if mods, err := r.Workspace.ModifiedFiles(); err == nil {
 		res.FilesModified = mods
 	}
@@ -136,6 +143,18 @@ func (r *ClaudeRunner) Run(ctx context.Context, task Task, cond Condition, runIn
 	}
 	return res
 }
+
+// ErrRateLimited indicates the Claude CLI returned the subscription
+// rate-limit banner as its final result. The run may have consumed real
+// tokens before being cut off, but produced no usable answer, so it
+// should be treated as a transient runner error (and re-run after the
+// limit resets).
+var ErrRateLimited = errors.New("claude rate limit hit")
+
+// rateLimitMarker is the substring the Claude CLI emits in its final
+// result event when the subscription quota is exhausted, e.g.
+// "You've hit your limit · resets 7:10pm (Asia/Almaty)".
+const rateLimitMarker = "You've hit your limit"
 
 // streamEvent is the subset of fields we read from each stream-json line.
 type streamEvent struct {
@@ -165,6 +184,38 @@ type parsedStream struct {
 	OutputTokens             int
 	CacheCreationInputTokens int
 	CacheReadInputTokens     int
+}
+
+// ReplayTranscript parses a saved stream-json transcript and returns a
+// RunResult equivalent to what Run would have produced. It is the
+// read-side counterpart used by the harness's resume path: if a cell's
+// transcript already exists and didn't hit the rate limit, the harness
+// reuses it instead of paying to re-run.
+//
+// Diff and FilesModified are not recoverable from the transcript, so
+// criteria depending on those will be marked failed/skipped on replay.
+// For purely output-driven tasks (e.g. output_contains) replay is
+// faithful.
+func ReplayTranscript(path string, task Task, cond Condition, runIndex int) (RunResult, error) {
+	res := RunResult{TaskID: task.ID, Condition: cond, RunIndex: runIndex}
+	f, err := os.Open(path)
+	if err != nil {
+		return res, err
+	}
+	defer f.Close()
+	parsed, err := parseStreamJSON(f)
+	if err != nil {
+		return res, err
+	}
+	res.Output = parsed.Result
+	res.InputTokens = parsed.InputTokens
+	res.OutputTokens = parsed.OutputTokens
+	res.CacheCreationTokens = parsed.CacheCreationInputTokens
+	res.CacheReadTokens = parsed.CacheReadInputTokens
+	if strings.Contains(parsed.Result, rateLimitMarker) {
+		res.Err = ErrRateLimited
+	}
+	return res, nil
 }
 
 // parseStreamJSON reads newline-delimited JSON events from r and returns
