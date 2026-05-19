@@ -65,14 +65,9 @@ func (s *Server) registerTools() {
 func repoOverviewTool() mcp.Tool {
 	return mcp.NewTool("repo_overview",
 		mcp.WithDescription(
-			"USE THIS FIRST for any question about the repository's structure, architecture, "+
-				"or how things relate. Returns the full package/module tree with file counts, "+
-				"a summary per package, and top exported symbols — typically <500 tokens for a "+
-				"repo where a Glob+Read survey would cost 5,000-20,000. "+
-				"Trigger phrases: 'how does X work', 'explain Y', 'where is Z', 'walk me through', "+
-				"'what's in this repo'. "+
-				"If you are about to Glob then Read multiple files just to orient yourself, "+
-				"call repo_overview instead — it was built for exactly that.",
+			"Returns the repository's package/module tree with file counts and top exported symbols. "+
+				"Useful for initial orientation when you do not know where a feature lives. "+
+				"Skip it if you already know which package to look in — use symbol_search directly instead.",
 		),
 		mcp.WithNumber("max_depth",
 			mcp.Description("Package tree depth."),
@@ -84,16 +79,20 @@ func repoOverviewTool() mcp.Tool {
 func fileOutlineTool() mcp.Tool {
 	return mcp.NewTool("file_outline",
 		mcp.WithDescription(
-			"USE THIS INSTEAD OF Read when you only need to know what's in a file, not its full contents. "+
-				"Returns every class, function, method, and top-level constant with line ranges and signatures. "+
-				"Typical cost: ~10x fewer tokens than reading the whole file. "+
-				"Trigger phrases: 'what's in <file>', 'is X defined in <file>', 'what does <file> expose', "+
-				"'find the definition of X' (use after repo_overview points to a file). "+
-				"After this, only Read the specific symbol's line range — never the whole file.",
+			"List the symbols (classes, functions, methods, constants) in a file with line ranges and signatures. "+
+				"Best for small-to-medium files where you need a complete inventory. "+
+				"For large files or when you are looking for a specific symbol, prefer symbol_search + symbol_source — "+
+				"they return only the relevant item rather than the full symbol list. "+
+				"After this, call symbol_source for any specific symbol you want to inspect — never Read the whole file.",
 		),
 		mcp.WithString("path",
 			mcp.Required(),
 			mcp.Description("Repo-relative path."),
+		),
+		mcp.WithNumber("limit",
+			mcp.Description("Maximum symbols to return. Default 60; raise to 200 if you need the full inventory."),
+			mcp.DefaultNumber(60),
+			mcp.Max(200),
 		),
 	)
 }
@@ -178,6 +177,13 @@ func (s *Server) handleFileOutline(ctx context.Context, req mcp.CallToolRequest)
 	if path == "" {
 		return mcp.NewToolResultError("path is required"), nil
 	}
+	limit := int(req.GetFloat("limit", 60))
+	if limit <= 0 {
+		limit = 60
+	}
+	if limit > 200 {
+		limit = 200
+	}
 	rows, err := s.store.SymbolsByFile(path)
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
@@ -189,17 +195,29 @@ func (s *Server) handleFileOutline(ctx context.Context, req mcp.CallToolRequest)
 		StartLine int    `json:"start_line"`
 		EndLine   int    `json:"end_line"`
 		Signature string `json:"signature,omitempty"`
-		Docstring string `json:"docstring,omitempty"`
+	}
+	total := len(rows)
+	if len(rows) > limit {
+		rows = rows[:limit]
 	}
 	out := make([]outlineSym, 0, len(rows))
 	for _, r := range rows {
+		sig := r.Signature
+		if len(sig) > 100 {
+			sig = sig[:97] + "..."
+		}
 		out = append(out, outlineSym{
 			Name: r.Name, Qualified: r.Qualified, Kind: r.Kind,
 			StartLine: r.StartLine, EndLine: r.EndLine,
-			Signature: r.Signature, Docstring: r.Docstring,
+			Signature: sig,
 		})
 	}
-	return jsonResult(map[string]any{"path": path, "symbols": out})
+	result := map[string]any{"path": path, "symbols": out, "total_symbols": total}
+	if total > limit {
+		result["truncated"] = true
+		result["hint"] = "use symbol_search to find specific items in this large file"
+	}
+	return jsonResult(result)
 }
 
 func (s *Server) handleSymbolSearch(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
