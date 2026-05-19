@@ -25,15 +25,17 @@ var benchFlags struct {
 
 const defaultClaudeMD = `# Repository tooling
 
-This repository has the **cogni** MCP server registered with these tools:
+This repository has the **cogni** MCP server. Use its tools **instead of** Glob / Grep / Read for code navigation:
 
-- ` + "`mcp__cogni__repo_overview`" + `: high-level package map. Call FIRST for any architecture / "how does X work" question.
-- ` + "`mcp__cogni__file_outline`" + `: list symbols in a file without returning source. Use INSTEAD OF Read when you only need to know what a file exposes.
-- ` + "`mcp__cogni__symbol_search`" + `: find where a symbol is defined. Use INSTEAD OF Grep for definition lookups.
-- ` + "`mcp__cogni__symbol_source`" + `: return one symbol's body. Use INSTEAD OF Read after symbol_search.
-- ` + "`mcp__cogni__find_references`" + `: find usages of a symbol. Use INSTEAD OF Grep when answering "where is X used".
+| Goal | Use this | Not this |
+|---|---|---|
+| Find where a symbol is defined | ` + "`symbol_search`" + ` | Grep |
+| Read one function/class body | ` + "`symbol_source`" + ` | Read (whole file) |
+| Find all usages of a symbol | ` + "`find_references`" + ` | Grep |
+| Get a file's symbol list | ` + "`file_outline`" + ` | Read |
+| Orient in an unknown codebase | ` + "`repo_overview`" + ` | Glob + Read |
 
-For code exploration tasks, **prefer the cogni tools** over Glob / Grep / Read. They return structured, scoped results and use 5-10x fewer tokens for the same answer.
+**Decision rule**: if you know the symbol name, use ` + "`symbol_search` → `symbol_source`" + `. Only use ` + "`file_outline`" + ` when you need to survey an entire file and don't have a target symbol yet. Never call ` + "`repo_overview`" + ` more than once per task.
 `
 
 var benchCmd = &cobra.Command{
