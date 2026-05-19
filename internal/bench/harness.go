@@ -53,6 +53,10 @@ func runLoop(ctx context.Context, set *TaskSet, opts HarnessOptions, run runOneF
 		opts.Conditions = []Condition{ConditionBaseline, ConditionCogni}
 	}
 
+	if _, err := ensureResumeMeta(set, opts); err != nil {
+		return nil, err
+	}
+
 	var scores []Score
 	for _, task := range set.Tasks {
 		for _, cond := range opts.Conditions {
