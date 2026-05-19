@@ -1,6 +1,9 @@
 package bench
 
 import (
+	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -72,6 +75,50 @@ func TestParseStreamJSONFallbackSumsCacheTokens(t *testing.T) {
 	}
 	if got.CacheCreationInputTokens != 150 || got.CacheReadInputTokens != 3000 {
 		t.Errorf("fallback cache=%d/%d, want 150/3000", got.CacheCreationInputTokens, got.CacheReadInputTokens)
+	}
+}
+
+func TestReplayTranscriptCleanRun(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "explain-x-baseline-0.jsonl")
+	stream := strings.Join([]string{
+		`{"type":"system","subtype":"init"}`,
+		`{"type":"result","subtype":"success","result":"the answer mentions NodeList","usage":{"input_tokens":12,"output_tokens":1338,"cache_creation_input_tokens":19342,"cache_read_input_tokens":235161}}`,
+	}, "\n")
+	if err := os.WriteFile(path, []byte(stream), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	res, err := ReplayTranscript(path, Task{ID: "explain-x"}, ConditionBaseline, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Err != nil {
+		t.Errorf("clean replay should have no Err, got %v", res.Err)
+	}
+	if res.Output != "the answer mentions NodeList" {
+		t.Errorf("Output=%q", res.Output)
+	}
+	if res.InputTokens != 12 || res.OutputTokens != 1338 {
+		t.Errorf("tokens=%d/%d, want 12/1338", res.InputTokens, res.OutputTokens)
+	}
+	if res.CacheReadTokens != 235161 {
+		t.Errorf("cache_read=%d, want 235161", res.CacheReadTokens)
+	}
+}
+
+func TestReplayTranscriptRateLimited(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "explain-x-cogni-0.jsonl")
+	stream := `{"type":"result","subtype":"success","result":"You've hit your limit · resets 7:10pm (Asia/Almaty)","usage":{"input_tokens":12,"output_tokens":1338}}`
+	if err := os.WriteFile(path, []byte(stream), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	res, err := ReplayTranscript(path, Task{ID: "explain-x"}, ConditionCogni, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !errors.Is(res.Err, ErrRateLimited) {
+		t.Errorf("rate-limited transcript should surface ErrRateLimited, got %v", res.Err)
 	}
 }
 

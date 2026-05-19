@@ -53,6 +53,10 @@ func runLoop(ctx context.Context, set *TaskSet, opts HarnessOptions, run runOneF
 		opts.Conditions = []Condition{ConditionBaseline, ConditionCogni}
 	}
 
+	if _, err := ensureResumeMeta(set, opts); err != nil {
+		return nil, err
+	}
+
 	var scores []Score
 	for _, task := range set.Tasks {
 		for _, cond := range opts.Conditions {
@@ -70,6 +74,10 @@ func runLoop(ctx context.Context, set *TaskSet, opts HarnessOptions, run runOneF
 }
 
 func realRunOne(ctx context.Context, set *TaskSet, task Task, cond Condition, runIndex int, opts HarnessOptions) Score {
+	if res, ok := tryReplay(opts, task, cond, runIndex); ok {
+		return ScoreRun(task, res)
+	}
+
 	start := time.Now()
 	ws, err := Prepare(set.TargetRepo, set.TargetSHA, opts.ParentDir)
 	if err != nil {
@@ -115,6 +123,31 @@ func realRunOne(ctx context.Context, set *TaskSet, task Task, cond Condition, ru
 	runner := &ClaudeRunner{Cfg: opts.RunnerCfg, Workspace: ws}
 	res := runner.Run(ctx, task, cond, runIndex)
 	return ScoreRun(task, res)
+}
+
+// tryReplay returns a RunResult parsed from an existing transcript if
+// one exists for this cell and represents a fully completed, non-rate-
+// limited run. This is the harness's resume path: rerun the same bench
+// command after a rate-limit ctrl-C and previously-good cells are
+// skipped instead of paying for them again.
+func tryReplay(opts HarnessOptions, task Task, cond Condition, runIndex int) (RunResult, bool) {
+	if opts.RunnerCfg.RunsDir == "" {
+		return RunResult{}, false
+	}
+	path := filepath.Join(opts.RunnerCfg.RunsDir, fmt.Sprintf("%s-%s-%d.jsonl", task.ID, cond, runIndex))
+	if _, err := os.Stat(path); err != nil {
+		return RunResult{}, false
+	}
+	res, err := ReplayTranscript(path, task, cond, runIndex)
+	if err != nil {
+		return RunResult{}, false
+	}
+	// Only reuse cells that finished cleanly. A rate-limited transcript
+	// (banner-as-answer) or one missing a result event must be re-run.
+	if res.Err != nil || res.Output == "" {
+		return RunResult{}, false
+	}
+	return res, true
 }
 
 // indexWorkspace builds the cogni index for a freshly-prepared workspace so
