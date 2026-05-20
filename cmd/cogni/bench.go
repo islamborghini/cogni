@@ -76,6 +76,10 @@ func runBench(cmd *cobra.Command, args []string) error {
 		return w.Flush()
 	}
 
+	if err := preflightMCPBinaries(cmd.ErrOrStderr(), benchFlags.mcpConfig); err != nil {
+		return err
+	}
+
 	opts := bench.HarnessOptions{
 		RunsPerCondition: benchFlags.runs,
 		Progress:         cmd.ErrOrStderr(),
